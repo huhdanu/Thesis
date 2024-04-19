@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "867706539798",
+    "project_id": "final-pro-97449",
+    "storage_bucket": "final-pro-97449.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:867706539798:android:ab2894c9d7a0acfb914a37",
+        "android_client_info": {
+          "package_name": "com.example.flutter_smart_home"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9Pi37HIms_ik9HPUNOHO-YAlxXEHbAhs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
