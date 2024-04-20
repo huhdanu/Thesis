@@ -4,14 +4,19 @@ import 'package:flutter_smart_home/room/bed_room.dart'; // energy template
 
 import 'package:firebase_core/firebase_core.dart';
 
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+/* import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; */
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await Firebase.initializeApp(
-      /* options: FirebaseOptions(apiKey: apiKey, appId: appId, messagingSenderId: messagingSenderId, projectId: projectId) */
-      );
+    options: const FirebaseOptions(
+        apiKey: 'AIzaSyA9Pi37HIms_ik9HPUNOHO - YAlxXEHbAhs',
+        appId: '1:867706539798:android:ab2894c9d7a0acfb914a37',
+        messagingSenderId: '867706539798',
+        projectId: 'final-pro-97449'),
+  );
 
   runApp(const MyApp());
 }
@@ -226,7 +231,7 @@ class _HomePageState extends State<HomePage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const TemperaturePage(),
+                                builder: (context) => const Kitchen(),
                               ),
                             );
                           },

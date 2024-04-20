@@ -5,8 +5,15 @@ import 'package:flutter/widgets.dart'; */
 
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
+import 'package:firebase_database/firebase_database.dart';
 
-/* class for devices */
+class Kitchen extends StatefulWidget {
+  const Kitchen({Key? key}) : super(key: key);
+
+  @override
+  _Kitchen createState() => _Kitchen();
+}
+
 class FanWidget extends StatefulWidget {
   final String title;
 
@@ -19,17 +26,23 @@ class FanWidget extends StatefulWidget {
 class _FanWidgetState extends State<FanWidget> {
   bool isActive = false;
 
+  final DatabaseReference deviceALARM =
+      FirebaseDatabase.instance.ref('ROOM2/DEVICES').child('Alarm');
+
+  final DatabaseReference deviceLARM =
+      FirebaseDatabase.instance.ref('ROOM2/DEVICES').child('Larm');
+
+  final DatabaseReference devicePUMP = FirebaseDatabase.instance.ref('Pump');
+
   void toggleDevice() {
     setState(() {
       isActive = !isActive;
-      if (widget.title == 'FAN') {
-        isActive ? print('FAN is active') : print('FAN is inactive');
+      if (widget.title == 'BELL') {
+        isActive ? deviceALARM.set(true) : deviceALARM.set(false);
       } else if (widget.title == 'LIGHT') {
-        isActive ? print('LIGHT is active') : print('LIGHT is inactive');
+        isActive ? deviceLARM.set(true) : deviceLARM.set(false);
       } else {
-        isActive
-            ? print('WATER CONTROL is active')
-            : print('WATER CONTROL is inactive');
+        isActive ? devicePUMP.set(1) : devicePUMP.set(0);
       }
     });
   }
@@ -65,21 +78,33 @@ class _FanWidgetState extends State<FanWidget> {
   }
 }
 
-/* main class */
-class TemperaturePage extends StatefulWidget {
-  const TemperaturePage({Key? key}) : super(key: key);
-
-  @override
-  _TemperaturePage createState() => _TemperaturePage();
-}
-
-class _TemperaturePage extends State<TemperaturePage> {
-  int dtemp = 40; // variable for temparature
-  int dhum = 80; // variable for humidity
-
+class _Kitchen extends State<Kitchen> {
   int _dtemp = 0; // temp variable
-  int _dhum = 0; // temp humidity
+  int _dgas = 0; // temp humidity
 
+  /* variable for get data from Firebase */
+  int tempVal = 0;
+  int humVal = 0;
+  int gasThreshold = 30;
+  int tempThreshold = 20;
+
+  bool flagSendData = false;
+
+  /*  */
+  final DatabaseReference databaseTEMP =
+      FirebaseDatabase.instance.ref('ROOM2/SENSORS').child('Temperature');
+
+  final DatabaseReference databaseHUM =
+      FirebaseDatabase.instance.ref('ROOM2/SENSORS').child('Humidity');
+
+  final DatabaseReference databaseGASThreshold =
+      FirebaseDatabase.instance.ref('ROOM2/SETTINGS').child('Gas Threshold');
+
+  final DatabaseReference databaseTEMPThreshold = FirebaseDatabase.instance
+      .ref('ROOM2/SETTINGS')
+      .child('Temperature Threshold');
+
+  /* function for confirm when user want to change data TEMP threshold */
   void _showConfirmationDialogTemp(double newValue) {
     showDialog(
       context: context,
@@ -91,7 +116,7 @@ class _TemperaturePage extends State<TemperaturePage> {
                 fontWeight: FontWeight.bold,
               )),
           content: Text(
-              'Do you want to set the value Threshold Temparature to ${newValue.toInt()}°C?',
+              'Do you want to set the value of Threshold Temparature to ${newValue.toInt()}°C?',
               style: const TextStyle(
                 fontSize: 18,
               )),
@@ -99,7 +124,9 @@ class _TemperaturePage extends State<TemperaturePage> {
             TextButton(
               onPressed: () {
                 setState(() {
-                  dtemp = newValue.toInt();
+                  tempThreshold = newValue.toInt();
+                  /* send data */
+                  databaseTEMPThreshold.set(tempThreshold);
                 });
                 Navigator.of(context).pop();
               },
@@ -108,7 +135,7 @@ class _TemperaturePage extends State<TemperaturePage> {
             TextButton(
               onPressed: () {
                 setState(() {
-                  dtemp = _dtemp;
+                  tempThreshold = _dtemp;
                 });
                 Navigator.of(context).pop();
               },
@@ -120,6 +147,7 @@ class _TemperaturePage extends State<TemperaturePage> {
     );
   }
 
+  /* function for confirm when user want to change data GAS threshold */
   void _showConfirmationDialogHum(double newValue) {
     showDialog(
       context: context,
@@ -131,7 +159,7 @@ class _TemperaturePage extends State<TemperaturePage> {
                 fontWeight: FontWeight.bold,
               )),
           content: Text(
-              'Do you want to set the value Threshold Humidity to ${newValue.toInt()}%?',
+              'Do you want to set the value of Threshold Gas to ${newValue.toInt()}ppm?',
               style: const TextStyle(
                 fontSize: 18,
               )),
@@ -139,8 +167,9 @@ class _TemperaturePage extends State<TemperaturePage> {
             TextButton(
               onPressed: () {
                 setState(() {
-                  dhum = newValue.toInt();
-                  // send to Firebase command
+                  gasThreshold = newValue.toInt();
+                  // send to Firebase
+                  databaseGASThreshold.set((gasThreshold ~/ 100).toInt());
                 });
                 Navigator.of(context).pop();
               },
@@ -149,8 +178,8 @@ class _TemperaturePage extends State<TemperaturePage> {
             TextButton(
               onPressed: () {
                 setState(() {
-                  dhum = _dhum;
-                  // send to Firebase command
+                  gasThreshold = _dgas;
+                  // send to Firebase
                 });
                 Navigator.of(context).pop();
               },
@@ -164,6 +193,54 @@ class _TemperaturePage extends State<TemperaturePage> {
 
   @override
   Widget build(BuildContext context) {
+    /* get data for TEMP sensor */
+    databaseTEMP.onValue.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            String temp_ = event.snapshot.value.toString();
+            tempVal = int.parse(temp_);
+          });
+        }
+      },
+    );
+
+    /* get data for HUM sensor */
+    databaseHUM.onValue.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            String humVal_ = event.snapshot.value.toString();
+            humVal = int.parse(humVal_);
+          });
+        }
+      },
+    );
+
+    /* get data GAS threshold */
+    databaseGASThreshold.onValue.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            String gasThrehold_ = event.snapshot.value.toString();
+            gasThreshold = int.parse(gasThrehold_);
+          });
+        }
+      },
+    );
+
+    /* get data TEMP threshold */
+    databaseTEMPThreshold.onValue.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            String tempThrehold_ = event.snapshot.value.toString();
+            tempThreshold = int.parse(tempThrehold_);
+          });
+        }
+      },
+    );
+
     return Scaffold(
       backgroundColor: Colors.indigo.shade50,
       body: SafeArea(
@@ -196,19 +273,27 @@ class _TemperaturePage extends State<TemperaturePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 25),
               Expanded(
                 child: ListView(
                   physics: const BouncingScrollPhysics(),
                   children: [
                     const SizedBox(height: 32),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        const SizedBox(width: 20),
-                        _Circle(
-                            title: 'Temparature', radiusValue: 140, value: 67),
+                        const SizedBox(width: 21),
+                        circle(
+                          title: 'Temparature',
+                          radiusValue: 70,
+                          value: tempVal,
+                        ),
                         const SizedBox(width: 35),
-                        _Circle(title: 'Humidity', radiusValue: 140, value: 89),
+                        circle(
+                          title: 'Humidity',
+                          radiusValue: 70,
+                          value: humVal,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -241,7 +326,7 @@ class _TemperaturePage extends State<TemperaturePage> {
                                   ),
                                 ),
                                 Text(
-                                  '$dtemp°C',
+                                  '$tempThreshold°C',
                                   style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold),
@@ -250,28 +335,29 @@ class _TemperaturePage extends State<TemperaturePage> {
                             ),
                           ),
                           Slider(
-                            value: dtemp.toDouble(),
+                            value: tempThreshold.toDouble(),
                             onChangeStart: (newValue) {
-                              _dtemp = dtemp;
+                              _dtemp = tempThreshold;
                             },
                             onChanged: (newValue) {
                               setState(() {
-                                dtemp = newValue.toInt();
+                                tempThreshold = newValue.toInt();
                               });
                             },
                             onChangeEnd: (newValue) {
                               _showConfirmationDialogTemp(newValue);
                             },
-                            max: 99,
+                            max: 90,
+                            min: 20,
                           ),
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 24),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('20\u00B0'),
-                                Text('50\u00B0'),
-                                Text('80\u00B0'),
+                                Text('20°C'),
+                                Text('50°C'),
+                                Text('90°C'),
                               ],
                             ),
                           )
@@ -294,13 +380,13 @@ class _TemperaturePage extends State<TemperaturePage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text(
-                                  'THRESHOLD HUMIDITY',
+                                  'THRESHOLD GAS',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 Text(
-                                  '$dhum%',
+                                  '$gasThreshold ppm',
                                   style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold),
@@ -309,28 +395,30 @@ class _TemperaturePage extends State<TemperaturePage> {
                             ),
                           ),
                           Slider(
-                            value: dhum.toDouble(),
+                            value: (gasThreshold.toDouble()) * 100,
                             onChangeStart: (newValue) {
-                              _dhum = dhum;
+                              _dgas = gasThreshold * 100;
                             },
                             onChanged: (newValue) {
                               setState(() {
-                                dhum = newValue.toInt();
+                                gasThreshold = newValue.toInt();
+                                // send data 2 firebase
                               });
                             },
                             onChangeEnd: (newValue) {
                               _showConfirmationDialogHum(newValue);
                             },
-                            max: 99,
+                            max: 9000,
+                            min: 3000,
                           ),
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 24),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('33%'),
-                                Text('66%'),
-                                Text('99%'),
+                                Text('3000ppm'),
+                                Text('6000ppm'),
+                                Text('9000ppm'),
                               ],
                             ),
                           )
@@ -341,9 +429,9 @@ class _TemperaturePage extends State<TemperaturePage> {
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        FanWidget(title: 'FAN'),
+                        FanWidget(title: 'BELL'),
                         FanWidget(title: 'LIGHT'),
-                        FanWidget(title: 'WATER'),
+                        FanWidget(title: 'WATER PUMPS'),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -357,16 +445,56 @@ class _TemperaturePage extends State<TemperaturePage> {
     );
   }
 
-  Widget _Circle({
+  Widget circle({
     required String title,
     required int radiusValue,
     var value,
   }) {
+    List<Color> gradientColors = [
+      Colors.green,
+      const Color.fromARGB(255, 232, 6, 6),
+    ];
+
+    double ratio;
+    double colorIndex;
+
+    if (value <= 45) {
+      ratio = (value - 20) / (46 - 20);
+      colorIndex = ((gradientColors.length - 1) * ratio);
+    } else {
+      ratio = (value - 45) / (100 - 45);
+      colorIndex = 0;
+    }
+
+    colorIndex = ((gradientColors.length - 1) * ratio);
+
+    Color beginColor = gradientColors[colorIndex.toInt()];
+    Color endColor = gradientColors[colorIndex.toInt() + 1];
+
+    // Create a linear gradient
+    LinearGradient gradient = LinearGradient(
+      colors: [beginColor, endColor],
+      begin: Alignment.centerRight,
+      end: Alignment.centerLeft,
+    );
+
+    /* Color color;
+
+    if (value <= 38) {
+      color = Colors.green; 
+    } else if (value < 50) {
+      color = Colors.yellow; 
+    } else {
+      color = Colors.red; 
+    } */
+
     return CircularPercentIndicator(
       radius: radiusValue.toDouble(),
       lineWidth: 14,
       percent: value / 100,
-      progressColor: Colors.red,
+      backgroundColor: Colors.grey, // Set background color to show the gradient
+      linearGradient: gradient, // Set linearGradient to the created gradient
+      //progressColor: color,
       center: Text(
         value.toString() + '\u00B0', // assign from value to string in Dart
         style: const TextStyle(
@@ -392,234 +520,6 @@ class _TemperaturePage extends State<TemperaturePage> {
           color: Colors.pink,
           fontSize: 20,
           fontWeight: FontWeight.bold,
-        ),
-      ),
-    ));
-  }
-}
-
-class _Energy extends State<TemperaturePage> {
-  double heating = 12;
-  double fan = 15;
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.indigo.shade50,
-      body: SafeArea(
-        child: Container(
-          margin: const EdgeInsets.only(top: 18, left: 24, right: 24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.black),
-                  ),
-                  const SizedBox(height: 50),
-                  const Expanded(
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: Text(
-                        'BED ROOM',
-                        style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Expanded(
-                child: ListView(
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    const SizedBox(height: 32),
-                    Row(
-                      children: [
-                        const SizedBox(width: 20),
-                        _Circle(title: 'Temparature', value: 60),
-                        const SizedBox(width: 80),
-                        _Circle(title: 'Humidity', value: 15),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _roundedButton(title: 'Temparature', valueHori: 45),
-                        _roundedButton(title: 'Humidity', valueHori: 60),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 24),
-                            child: Text(
-                              'THRESHOLD TEMPERATURE',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          Slider(
-                            value: heating,
-                            onChanged: (newHeating) {
-                              setState(() => heating = newHeating);
-                            },
-                            max: 30,
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 24),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('20\u00B0'),
-                                Text('50\u00B0'),
-                                Text('80\u00B0'),
-                              ],
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 24),
-                            child: Text(
-                              'THRESHOLD HUMIDITY',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          Slider(
-                            value: fan,
-                            onChanged: (newFan) {
-                              setState(() => fan = newFan);
-                            },
-                            max: 30,
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 24),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('33%'),
-                                Text('66%'),
-                                Text('99%'),
-                              ],
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _fan(
-                          title: 'FAN 1',
-                          /* onTap: () {
-                            (isActive == true)?(isActive == true):(isActive == false);
-                        } */
-                        ),
-                        _fan(title: 'FAN 2', isActive: true),
-                        _fan(title: 'FAN 3'),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _fan({
-    required String title,
-    bool isActive = false,
-    VoidCallback? onTap,
-  }) {
-    return GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: isActive ? Colors.green : Colors.white,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Image.asset(
-            isActive ? 'assets/images/fan-2.png' : 'assets/images/fan-1.png',
-          ),
-
-          /* Text(
-          title,
-          style: TextStyle(
-            color: isActive ? Colors.black87 : Colors.black54,
-          ),
-        )), */
-        ));
-  }
-
-  Widget _Circle({
-    required String title,
-    var value,
-  }) {
-    return CircularPercentIndicator(
-      radius: 170,
-      lineWidth: 14,
-      percent: value / 100,
-      progressColor: Colors.red,
-      center: Text(
-        value.toString() + '\u00B0', // assign from value to string in Dart
-        style: const TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _roundedButton({
-    required String title,
-    required double valueHori,
-  }) {
-    return GestureDetector(
-        child: Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: valueHori,
-      ),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: Colors.black45,
-          fontSize: 20,
         ),
       ),
     ));

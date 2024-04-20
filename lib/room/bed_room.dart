@@ -3,10 +3,9 @@ import 'package:flutter/painting.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart'; */
 
-//import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class Energy extends StatefulWidget {
   const Energy({Key? key}) : super(key: key);
@@ -26,18 +25,23 @@ class FanWidget extends StatefulWidget {
 
 class _FanWidgetState extends State<FanWidget> {
   bool isActive = false;
+  final DatabaseReference deviceALARM =
+      FirebaseDatabase.instance.ref('Room1/DEVICES').child('Alarm');
+
+  final DatabaseReference deviceLARM =
+      FirebaseDatabase.instance.ref('Room1/DEVICES').child('Larm');
+
+  final DatabaseReference devicePUMP = FirebaseDatabase.instance.ref('Pump');
 
   void toggleDevice() {
     setState(() {
       isActive = !isActive;
       if (widget.title == 'BELL') {
-        isActive ? print('BELL is active') : print('BELL is inactive');
+        isActive ? deviceALARM.set(true) : deviceALARM.set(false);
       } else if (widget.title == 'LIGHT') {
-        isActive ? print('LIGHT is active') : print('LIGHT is inactive');
+        isActive ? deviceLARM.set(true) : deviceLARM.set(false);
       } else {
-        isActive
-            ? print('WATER PUMPS is active')
-            : print('WATER PUMPS is inactive');
+        isActive ? devicePUMP.set(1) : devicePUMP.set(0);
       }
     });
   }
@@ -74,12 +78,31 @@ class _FanWidgetState extends State<FanWidget> {
 }
 
 class _Energy extends State<Energy> {
-  int dtemp = 69; // variable for temparature
-  int dgas = 4579; // variable for humidity
-
   int _dtemp = 0; // temp variable
   int _dgas = 0; // temp humidity
 
+  /* variable for get data from Firebase */
+  int tempVal = 0;
+  int humVal = 0;
+  int gasThreshold = 30;
+  int tempThreshold = 20;
+  bool flagSendData = false;
+
+  /*  */
+  final DatabaseReference databaseTEMP =
+      FirebaseDatabase.instance.ref('Room1/SENSORS').child('Temperature');
+
+  final DatabaseReference databaseHUM =
+      FirebaseDatabase.instance.ref('Room1/SENSORS').child('Humidity');
+
+  final DatabaseReference databaseGASThreshold =
+      FirebaseDatabase.instance.ref('Room1/SETTINGS').child('Gas Threshold');
+
+  final DatabaseReference databaseTEMPThreshold = FirebaseDatabase.instance
+      .ref('Room1/SETTINGS')
+      .child('Temperature Threshold');
+
+  /* function for confirm when user want to change data TEMP threshold */
   void _showConfirmationDialogTemp(double newValue) {
     showDialog(
       context: context,
@@ -91,7 +114,7 @@ class _Energy extends State<Energy> {
                 fontWeight: FontWeight.bold,
               )),
           content: Text(
-              'Do you want to set the value Threshold Temparature to ${newValue.toInt()}°C?',
+              'Do you want to set the value of Threshold Temparature to ${newValue.toInt()}°C?',
               style: const TextStyle(
                 fontSize: 18,
               )),
@@ -99,7 +122,9 @@ class _Energy extends State<Energy> {
             TextButton(
               onPressed: () {
                 setState(() {
-                  dtemp = newValue.toInt();
+                  tempThreshold = newValue.toInt();
+                  /* send data */
+                  databaseTEMPThreshold.set(tempThreshold);
                 });
                 Navigator.of(context).pop();
               },
@@ -108,7 +133,7 @@ class _Energy extends State<Energy> {
             TextButton(
               onPressed: () {
                 setState(() {
-                  dtemp = _dtemp;
+                  tempThreshold = _dtemp;
                 });
                 Navigator.of(context).pop();
               },
@@ -120,6 +145,7 @@ class _Energy extends State<Energy> {
     );
   }
 
+  /* function for confirm when user want to change data GAS threshold */
   void _showConfirmationDialogHum(double newValue) {
     showDialog(
       context: context,
@@ -131,7 +157,7 @@ class _Energy extends State<Energy> {
                 fontWeight: FontWeight.bold,
               )),
           content: Text(
-              'Do you want to set the value Threshold Gas to ${newValue.toInt()}ppm?',
+              'Do you want to set the value of Threshold Gas to ${newValue.toInt()}ppm?',
               style: const TextStyle(
                 fontSize: 18,
               )),
@@ -139,8 +165,9 @@ class _Energy extends State<Energy> {
             TextButton(
               onPressed: () {
                 setState(() {
-                  dgas = newValue.toInt();
+                  gasThreshold = newValue.toInt();
                   // send to Firebase
+                  databaseGASThreshold.set((gasThreshold ~/ 100).toInt());
                 });
                 Navigator.of(context).pop();
               },
@@ -149,7 +176,7 @@ class _Energy extends State<Energy> {
             TextButton(
               onPressed: () {
                 setState(() {
-                  dgas = _dgas;
+                  gasThreshold = _dgas;
                   // send to Firebase
                 });
                 Navigator.of(context).pop();
@@ -164,6 +191,54 @@ class _Energy extends State<Energy> {
 
   @override
   Widget build(BuildContext context) {
+    /* get data for TEMP sensor */
+    databaseTEMP.onValue.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            String temp_ = event.snapshot.value.toString();
+            tempVal = int.parse(temp_);
+          });
+        }
+      },
+    );
+
+    /* get data for HUM sensor */
+    databaseHUM.onValue.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            String humVal_ = event.snapshot.value.toString();
+            humVal = int.parse(humVal_);
+          });
+        }
+      },
+    );
+
+    /* get data GAS threshold */
+    databaseGASThreshold.onValue.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            String gasThrehold_ = event.snapshot.value.toString();
+            gasThreshold = int.parse(gasThrehold_);
+          });
+        }
+      },
+    );
+
+    /* get data TEMP threshold */
+    databaseTEMPThreshold.onValue.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            String tempThrehold_ = event.snapshot.value.toString();
+            tempThreshold = int.parse(tempThrehold_);
+          });
+        }
+      },
+    );
+
     return Scaffold(
       backgroundColor: Colors.indigo.shade50,
       body: SafeArea(
@@ -206,16 +281,16 @@ class _Energy extends State<Energy> {
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         const SizedBox(width: 21),
-                        _Circle(
+                        circle(
                           title: 'Temparature',
                           radiusValue: 70,
-                          value: 77,
+                          value: tempVal,
                         ),
                         const SizedBox(width: 35),
-                        _Circle(
+                        circle(
                           title: 'Humidity',
                           radiusValue: 70,
-                          value: 24,
+                          value: humVal,
                         ),
                       ],
                     ),
@@ -228,7 +303,6 @@ class _Energy extends State<Energy> {
                       ],
                     ),
                     const SizedBox(height: 32),
-                    
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 18),
                       decoration: BoxDecoration(
@@ -250,7 +324,7 @@ class _Energy extends State<Energy> {
                                   ),
                                 ),
                                 Text(
-                                  '$dtemp°C',
+                                  '$tempThreshold°C',
                                   style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold),
@@ -259,13 +333,13 @@ class _Energy extends State<Energy> {
                             ),
                           ),
                           Slider(
-                            value: dtemp.toDouble(),
+                            value: tempThreshold.toDouble(),
                             onChangeStart: (newValue) {
-                              _dtemp = dtemp;
+                              _dtemp = tempThreshold;
                             },
                             onChanged: (newValue) {
                               setState(() {
-                                dtemp = newValue.toInt();
+                                tempThreshold = newValue.toInt();
                               });
                             },
                             onChangeEnd: (newValue) {
@@ -310,7 +384,7 @@ class _Energy extends State<Energy> {
                                   ),
                                 ),
                                 Text(
-                                  '$dgas ppm',
+                                  '$gasThreshold ppm',
                                   style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold),
@@ -319,13 +393,14 @@ class _Energy extends State<Energy> {
                             ),
                           ),
                           Slider(
-                            value: dgas.toDouble(),
+                            value: (gasThreshold.toDouble()) * 100,
                             onChangeStart: (newValue) {
-                              _dgas = dgas;
+                              _dgas = gasThreshold;
                             },
                             onChanged: (newValue) {
                               setState(() {
-                                dgas = newValue.toInt();
+                                gasThreshold = newValue.toInt();
+                                // send data 2 firebase
                               });
                             },
                             onChangeEnd: (newValue) {
@@ -368,14 +443,14 @@ class _Energy extends State<Energy> {
     );
   }
 
-  Widget _Circle({
+  Widget circle({
     required String title,
     required int radiusValue,
     var value,
   }) {
     List<Color> gradientColors = [
       Colors.green,
-      Color.fromARGB(255, 232, 6, 6),
+      const Color.fromARGB(255, 232, 6, 6),
     ];
 
     double ratio;
