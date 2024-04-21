@@ -77,9 +77,9 @@ class _FanWidgetState extends State<FanWidget> {
   void toggleDevice() {
     setState(() {
       isActive = !isActive;
-      if (widget.title == 'BELL') {
+      if (widget.title == 'ALARM') {
         isActive ? deviceALARM.set(true) : deviceALARM.set(false);
-      } else if (widget.title == 'LIGHT') {
+      } else if (widget.title == 'LAMP') {
         isActive ? deviceLARM.set(true) : deviceLARM.set(false);
       } else {
         isActive ? devicePUMP.set(1) : devicePUMP.set(0);
@@ -137,7 +137,7 @@ class _Kitchen extends State<Kitchen> {
       FirebaseDatabase.instance.ref('ROOM2/SENSORS').child('Temperature');
 
   final DatabaseReference databaseHUM =
-      FirebaseDatabase.instance.ref('ROOM2/SENSORS').child('Humidity');
+      FirebaseDatabase.instance.ref('ROOM2/SENSORS').child('Gas');
 
   final DatabaseReference databaseGASThreshold =
       FirebaseDatabase.instance.ref('ROOM2/SETTINGS').child('Gas Threshold');
@@ -165,12 +165,7 @@ class _Kitchen extends State<Kitchen> {
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                setState(() {
-                  tempThreshold = newValue.toInt();
-                  /* send data */
-                  databaseTEMPThreshold.set(tempThreshold);
-                });
-                Navigator.of(context).pop();
+                showPasswordDialogTEMP(newValue);
               },
               child: const Text('Yes'),
             ),
@@ -189,8 +184,59 @@ class _Kitchen extends State<Kitchen> {
     );
   }
 
+  void showPasswordDialogTEMP(double newValue) {
+    String enteredPassword = '';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Enter Password'),
+          content: TextFormField(
+            decoration: const InputDecoration(labelText: 'Password'),
+            obscureText: true,
+            onChanged: (value) {
+              enteredPassword = value;
+            },
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Submit'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
+
+                if (enteredPassword == '123123') {
+                  setState(() {
+                    tempThreshold = newValue.toInt();
+                    // send to Firebase
+                    databaseTEMPThreshold.set((tempThreshold).toInt());
+                  });
+                } else {
+                  // Incorrect password
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Incorrect password!'),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   /* function for confirm when user want to change data GAS threshold */
-  void _showConfirmationDialogHum(double newValue) {
+  void showConfirmationDialogGAS(double newValue) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -208,12 +254,7 @@ class _Kitchen extends State<Kitchen> {
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                setState(() {
-                  gasThreshold = newValue.toInt();
-                  // send to Firebase
-                  databaseGASThreshold.set((gasThreshold ~/ 100).toInt());
-                });
-                Navigator.of(context).pop();
+                showPasswordDialogGAS(newValue);
               },
               child: const Text('Yes'),
             ),
@@ -226,6 +267,56 @@ class _Kitchen extends State<Kitchen> {
                 Navigator.of(context).pop();
               },
               child: const Text('No'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void showPasswordDialogGAS(double newValue) {
+    String enteredPassword = '';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Enter Password'),
+          content: TextFormField(
+            decoration: const InputDecoration(labelText: 'Password'),
+            obscureText: true,
+            onChanged: (value) {
+              enteredPassword = value;
+            },
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Submit'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
+                if (enteredPassword == '123123') {
+                  setState(() {
+                    gasThreshold = newValue.toInt();
+                    // send to Firebase
+                    databaseGASThreshold.set((gasThreshold).toInt());
+                  });
+                } else {
+                  // Incorrect password
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Incorrect password!'),
+                    ),
+                  );
+                }
+              },
             ),
           ],
         );
@@ -343,7 +434,7 @@ class _Kitchen extends State<Kitchen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _roundedButton(title: 'Temparature', valueHori: 30),
-                        _roundedButton(title: 'Humidity', valueHori: 40),
+                        _roundedButton(title: 'Gas', valueHori: 75),
                       ],
                     ),
                     const SizedBox(height: 32),
@@ -448,7 +539,7 @@ class _Kitchen extends State<Kitchen> {
                               });
                             },
                             onChangeEnd: (newValue) {
-                              _showConfirmationDialogHum(newValue);
+                              showConfirmationDialogGAS(newValue);
                             },
                             max: 99,
                             min: 5,
