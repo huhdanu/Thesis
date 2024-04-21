@@ -25,29 +25,72 @@ class FanWidget extends StatefulWidget {
 
 class _FanWidgetState extends State<FanWidget> {
   bool isActive = false;
+
   final DatabaseReference deviceALARM =
       FirebaseDatabase.instance.ref('Room1/DEVICES').child('Alarm');
 
   final DatabaseReference deviceLARM =
-      FirebaseDatabase.instance.ref('Room1/DEVICES').child('Larm');
+      FirebaseDatabase.instance.ref('Room1/DEVICES').child('Lamp');
 
   final DatabaseReference devicePUMP = FirebaseDatabase.instance.ref('Pump');
+
+  void getStateDevices() {
+    if (widget.title == 'ALARM') {
+      deviceALARM.onValue.listen(
+        (event) {
+          if (mounted) {
+            setState(() {
+              String receiveData = event.snapshot.value.toString();
+              bool alarm = bool.parse(receiveData);
+              (alarm == true) ? (isActive = true) : (isActive = false);
+            });
+          }
+        },
+      );
+    } else if (widget.title == 'LAMP') {
+      deviceLARM.onValue.listen(
+        (event) {
+          if (mounted) {
+            setState(() {
+              String receiveData = event.snapshot.value.toString();
+              bool lamp = bool.parse(receiveData);
+              (lamp == true) ? (isActive = true) : (isActive = false);
+            });
+          }
+        },
+      );
+    } else {
+      devicePUMP.onValue.listen(
+        (event) {
+          if (mounted) {
+            setState(() {
+              String receiveData = event.snapshot.value.toString();
+              int pump = int.parse(receiveData);
+              (pump == 1) ? (isActive = true) : (isActive = false);
+            });
+          }
+        },
+      );
+    }
+  }
 
   void toggleDevice() {
     setState(() {
       isActive = !isActive;
-      if (widget.title == 'BELL') {
+      if (widget.title == 'ALARM') {
         isActive ? deviceALARM.set(true) : deviceALARM.set(false);
-      } else if (widget.title == 'LIGHT') {
+      } else if (widget.title == 'LAMP') {
         isActive ? deviceLARM.set(true) : deviceLARM.set(false);
       } else {
-        isActive ? devicePUMP.set(1) : devicePUMP.set(0);
+        isActive ? devicePUMP.set(true) : devicePUMP.set(false);
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    getStateDevices();
+
     return GestureDetector(
       onTap: () {
         toggleDevice();
@@ -353,9 +396,9 @@ class _Energy extends State<Energy> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('20°C'),
+                                Text('10°C'),
                                 Text('50°C'),
-                                Text('90°C'),
+                                Text('99°C'),
                               ],
                             ),
                           )
@@ -393,30 +436,29 @@ class _Energy extends State<Energy> {
                             ),
                           ),
                           Slider(
-                            value: (gasThreshold.toDouble()) * 100,
+                            value: (gasThreshold.toDouble()),
                             onChangeStart: (newValue) {
                               _dgas = gasThreshold;
                             },
                             onChanged: (newValue) {
                               setState(() {
                                 gasThreshold = newValue.toInt();
-                                // send data 2 firebase
                               });
                             },
                             onChangeEnd: (newValue) {
                               _showConfirmationDialogHum(newValue);
                             },
-                            max: 9000,
-                            min: 3000,
+                            max: 100,
+                            min: 5,
                           ),
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 24),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('3000ppm'),
-                                Text('6000ppm'),
-                                Text('9000ppm'),
+                                Text('5ppm'),
+                                Text('55ppm'),
+                                Text('99ppm'),
                               ],
                             ),
                           )
@@ -427,9 +469,9 @@ class _Energy extends State<Energy> {
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        FanWidget(title: 'BELL'),
-                        FanWidget(title: 'LIGHT'),
-                        FanWidget(title: 'WATER PUMPS'),
+                        FanWidget(title: 'ALARM'),
+                        FanWidget(title: 'LAMP'),
+                        FanWidget(title: 'PUMP'),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -475,16 +517,6 @@ class _Energy extends State<Energy> {
       begin: Alignment.centerRight,
       end: Alignment.centerLeft,
     );
-
-    /* Color color;
-
-    if (value <= 38) {
-      color = Colors.green; 
-    } else if (value < 50) {
-      color = Colors.yellow; 
-    } else {
-      color = Colors.red; 
-    } */
 
     return CircularPercentIndicator(
       radius: radiusValue.toDouble(),

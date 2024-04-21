@@ -30,9 +30,49 @@ class _FanWidgetState extends State<FanWidget> {
       FirebaseDatabase.instance.ref('ROOM2/DEVICES').child('Alarm');
 
   final DatabaseReference deviceLARM =
-      FirebaseDatabase.instance.ref('ROOM2/DEVICES').child('Larm');
+      FirebaseDatabase.instance.ref('ROOM2/DEVICES').child('Lamp');
 
   final DatabaseReference devicePUMP = FirebaseDatabase.instance.ref('Pump');
+
+  void getStateDevices() {
+    if (widget.title == 'ALARM') {
+      deviceALARM.onValue.listen(
+        (event) {
+          if (mounted) {
+            setState(() {
+              String receiveData = event.snapshot.value.toString();
+              bool alarm = bool.parse(receiveData);
+              (alarm == true) ? (isActive = true) : (isActive = false);
+            });
+          }
+        },
+      );
+    } else if (widget.title == 'LAMP') {
+      deviceLARM.onValue.listen(
+        (event) {
+          if (mounted) {
+            setState(() {
+              String receiveData = event.snapshot.value.toString();
+              bool lamp = bool.parse(receiveData);
+              (lamp == true) ? (isActive = true) : (isActive = false);
+            });
+          }
+        },
+      );
+    } else {
+      devicePUMP.onValue.listen(
+        (event) {
+          if (mounted) {
+            setState(() {
+              String receiveData = event.snapshot.value.toString();
+              int pump = int.parse(receiveData);
+              (pump == 1) ? (isActive = true) : (isActive = false);
+            });
+          }
+        },
+      );
+    }
+  }
 
   void toggleDevice() {
     setState(() {
@@ -49,6 +89,8 @@ class _FanWidgetState extends State<FanWidget> {
 
   @override
   Widget build(BuildContext context) {
+    getStateDevices();
+
     return GestureDetector(
       onTap: () {
         toggleDevice();
@@ -355,9 +397,9 @@ class _Kitchen extends State<Kitchen> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('20°C'),
+                                Text('10°C'),
                                 Text('50°C'),
-                                Text('90°C'),
+                                Text('99°C'),
                               ],
                             ),
                           )
@@ -395,9 +437,9 @@ class _Kitchen extends State<Kitchen> {
                             ),
                           ),
                           Slider(
-                            value: (gasThreshold.toDouble()) * 100,
+                            value: (gasThreshold.toDouble()),
                             onChangeStart: (newValue) {
-                              _dgas = gasThreshold * 100;
+                              _dgas = gasThreshold;
                             },
                             onChanged: (newValue) {
                               setState(() {
@@ -408,17 +450,17 @@ class _Kitchen extends State<Kitchen> {
                             onChangeEnd: (newValue) {
                               _showConfirmationDialogHum(newValue);
                             },
-                            max: 9000,
-                            min: 3000,
+                            max: 99,
+                            min: 5,
                           ),
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 24),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('3000ppm'),
-                                Text('6000ppm'),
-                                Text('9000ppm'),
+                                Text('5ppm'),
+                                Text('55ppm'),
+                                Text('99ppm'),
                               ],
                             ),
                           )
@@ -429,9 +471,9 @@ class _Kitchen extends State<Kitchen> {
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        FanWidget(title: 'BELL'),
-                        FanWidget(title: 'LIGHT'),
-                        FanWidget(title: 'WATER PUMPS'),
+                        FanWidget(title: 'ALARM'),
+                        FanWidget(title: 'LAMP'),
+                        FanWidget(title: 'PUMP'),
                       ],
                     ),
                     const SizedBox(height: 24),
