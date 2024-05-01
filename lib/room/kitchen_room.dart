@@ -125,8 +125,8 @@ class _Kitchen extends State<Kitchen> {
   int _dgas = 0; // temp humidity
 
   /* variable for get data from Firebase */
-  int tempVal = 0;
-  int humVal = 0;
+  int tempVal = 25;
+  int humVal = 25;
   int gasThreshold = 30;
   int tempThreshold = 20;
 
@@ -542,7 +542,7 @@ class _Kitchen extends State<Kitchen> {
                               showConfirmationDialogGAS(newValue);
                             },
                             max: 99,
-                            min: 5,
+                            min: 0,
                           ),
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 24),

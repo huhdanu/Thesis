@@ -1,11 +1,11 @@
-/* import 'package:flutter/cupertino.dart';
-import 'package:flutter/painting.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart'; */
-
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async'; /* for count time */
+
+import 'package:flutter_smart_home/room/camera.dart'; // camera template
+import 'package:flutter_smart_home/room/kitchen_room.dart'; // energy template
 
 class Energy extends StatefulWidget {
   const Energy({Key? key}) : super(key: key);
@@ -120,22 +120,52 @@ class _FanWidgetState extends State<FanWidget> {
   }
 }
 
-class _Energy extends State<Energy> {
+class _Energy extends State<Energy> with WidgetsBindingObserver {
   int _dtemp = 0; // temp variable
   int _dgas = 0; // temp humidity
 
   /* variable for get data from Firebase */
   int tempVal = 0;
-  int humVal = 0;
+  int gasVal = 0;
   int gasThreshold = 30;
   int tempThreshold = 20;
   bool flagSendData = false;
 
-  /*  */
+  /* syntax for CRUD data in Realtime database */
   final DatabaseReference databaseTEMP =
       FirebaseDatabase.instance.ref('Room1/SENSORS').child('Temperature');
 
-  final DatabaseReference databaseHUM =
+  /* syntax for collect data in Fire store */
+  //final CollectionReference abc = FirebaseFirestore.instance.collection('ac');
+
+  void sendGasToFireStore(String fieldName, int value) {
+    Map<String, dynamic> userData = {
+      fieldName: value,
+    };
+
+    FirebaseFirestore.instance.collection('ROOM 1').doc('GAS').update(userData);
+  }
+
+  void sendTempToFireStore(String fieldName, int value) {
+    Map<String, dynamic> userData = {
+      fieldName: value,
+    };
+
+    FirebaseFirestore.instance
+        .collection('ROOM 1')
+        .doc('TEMP')
+        .update(userData);
+  }
+
+  /* void sendDataToFirestorePeriodically(int value) {
+    Timer.periodic(const Duration(minutes: 1), (timer) async {
+      FirebaseFirestore.instance.collection('ROOM 1').doc('Gas').set({
+        'Gas': value,
+      });
+    });
+  } */
+
+  final DatabaseReference databaseGAS =
       FirebaseDatabase.instance.ref('Room1/SENSORS').child('Gas');
 
   final DatabaseReference databaseGASThreshold =
@@ -234,6 +264,28 @@ class _Energy extends State<Energy> {
     );
   }
 
+  Future<void> fetchDocumentFromFirestore(String day) async {
+    DocumentSnapshot documentSnapshot =
+        await FirebaseFirestore.instance.collection('ROOM 1').doc('GAS').get();
+    String date;
+
+    if (documentSnapshot.exists) {
+      for (int i = 12; i < 13; i++) {
+        for (int j = 20; j < 24; j++) {
+          //date = day + '-' + i.toString() + ':' + j.toString();
+          date =
+              "$day-${i.toString().padLeft(2, '0')}:${j.toString().padLeft(2, '0')}";
+          int? field1 = documentSnapshot[date];
+          if (field1 != null) {
+            print('$date: $field1');
+          }
+        }
+      }
+    } else {
+      print('Document does not exist');
+    }
+  }
+
   /* function for confirm when user want to change data GAS threshold */
   void _showConfirmationDialogGAS(double newValue) {
     showDialog(
@@ -254,6 +306,7 @@ class _Energy extends State<Energy> {
             TextButton(
               onPressed: () {
                 showPasswordDialogGAS(newValue);
+                fetchDocumentFromFirestore('2024.4.29');
               },
               child: const Text('Yes'),
             ),
@@ -324,6 +377,40 @@ class _Energy extends State<Energy> {
   }
 
   @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused) {
+      /* process data to DTB */
+      DateTime now = DateTime.now();
+      int sec = now.second;
+      int min = now.minute;
+      print('$min:$sec');
+      if (sec == 59) {
+        String dateString =
+            "${now.year}.${now.month}.${now.day}-${now.hour}:${now.minute}";
+
+        if (gasVal >= gasThreshold) {
+          int value = gasVal * 100 + gasThreshold;
+          sendGasToFireStore(dateString, value);
+        } else
+          sendGasToFireStore(dateString, gasVal);
+
+        if (tempVal >= tempThreshold) {
+          int value = tempVal * 100 + tempThreshold;
+          sendTempToFireStore(dateString, value);
+        } else
+          sendTempToFireStore(dateString, tempVal);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     /* get data for TEMP sensor */
     databaseTEMP.onValue.listen(
@@ -338,12 +425,12 @@ class _Energy extends State<Energy> {
     );
 
     /* get data for HUM sensor */
-    databaseHUM.onValue.listen(
+    databaseGAS.onValue.listen(
       (event) {
         if (mounted) {
           setState(() {
-            String humVal_ = event.snapshot.value.toString();
-            humVal = int.parse(humVal_);
+            String gasVal_ = event.snapshot.value.toString();
+            gasVal = int.parse(gasVal_);
           });
         }
       },
@@ -373,6 +460,31 @@ class _Energy extends State<Energy> {
       },
     );
 
+    //sendDataToFirestorePeriodically(gasVal);
+    /* process data to DTB */
+    DateTime now = DateTime.now();
+    int sec = now.second;
+
+    if (sec == 59) {
+      int min = now.minute;
+      print('$min:$sec');
+      //fetchDocumentFromFirestore('2024.4.28');
+      String dateString =
+          "${now.year}.${now.month}.${now.day}-${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+
+      if (gasVal >= gasThreshold) {
+        int value = gasVal * 100 + gasThreshold;
+        sendGasToFireStore(dateString, value);
+      } else
+        sendGasToFireStore(dateString, gasVal);
+
+      if (tempVal >= tempThreshold) {
+        int value = tempVal * 100 + tempThreshold;
+        sendTempToFireStore(dateString, value);
+      } else
+        sendTempToFireStore(dateString, tempVal);
+    }
+
     return Scaffold(
       backgroundColor: Colors.indigo.shade50,
       body: SafeArea(
@@ -392,7 +504,7 @@ class _Energy extends State<Energy> {
                     child: const Icon(Icons.arrow_back_ios_new,
                         color: Colors.black),
                   ),
-                  const SizedBox(height: 50),
+                  /* const SizedBox(height: 50), */
                   const Expanded(
                     child: Align(
                       alignment: Alignment.center,
@@ -403,9 +515,23 @@ class _Energy extends State<Energy> {
                       ),
                     ),
                   ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const Camera(),
+                          ),
+                        );
+                      },
+                      child: const Icon(Icons.arrow_back_ios_new,
+                          color: Colors.black),
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 25),
+              /* const SizedBox(height: 25), */
               Expanded(
                 child: ListView(
                   physics: const BouncingScrollPhysics(),
@@ -424,7 +550,7 @@ class _Energy extends State<Energy> {
                         circle(
                           title: 'Gas',
                           radiusValue: 70,
-                          value: humVal,
+                          value: gasVal,
                         ),
                       ],
                     ),
