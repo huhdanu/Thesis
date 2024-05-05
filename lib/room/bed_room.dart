@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -5,7 +7,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async'; /* for count time */
 
 import 'package:flutter_smart_home/room/camera.dart'; // camera template
-import 'package:flutter_smart_home/room/kitchen_room.dart'; // energy template
 
 class Energy extends StatefulWidget {
   const Energy({Key? key}) : super(key: key);
@@ -24,15 +25,25 @@ class FanWidget extends StatefulWidget {
 }
 
 class _FanWidgetState extends State<FanWidget> {
+  String dataALARMDetect = '0', dataLAMPDetect = '0', dataPUMPDetect = '0';
   bool isActive = false;
 
   final DatabaseReference deviceALARM =
       FirebaseDatabase.instance.ref('Room1/DEVICES').child('Alarm');
 
-  final DatabaseReference deviceLARM =
+  final DatabaseReference deviceLAMP =
       FirebaseDatabase.instance.ref('Room1/DEVICES').child('Lamp');
 
   final DatabaseReference devicePUMP = FirebaseDatabase.instance.ref('Pump');
+
+  final DatabaseReference detectActiveALARM =
+      FirebaseDatabase.instance.ref('ACTIVE/IsAlarmActiveRoom1');
+
+  final DatabaseReference detectActiveLAMP =
+      FirebaseDatabase.instance.ref('ACTIVE/IsLampActiveRoom1');
+
+  final DatabaseReference detectActivePUMP =
+      FirebaseDatabase.instance.ref('ACTIVE/IsPumpActive');
 
   void getStateDevices() {
     if (widget.title == 'ALARM') {
@@ -48,7 +59,7 @@ class _FanWidgetState extends State<FanWidget> {
         },
       );
     } else if (widget.title == 'LAMP') {
-      deviceLARM.onValue.listen(
+      deviceLAMP.onValue.listen(
         (event) {
           if (mounted) {
             setState(() {
@@ -80,11 +91,64 @@ class _FanWidgetState extends State<FanWidget> {
       if (widget.title == 'ALARM') {
         isActive ? deviceALARM.set(true) : deviceALARM.set(false);
       } else if (widget.title == 'LAMP') {
-        isActive ? deviceLARM.set(true) : deviceLARM.set(false);
+        isActive ? deviceLAMP.set(true) : deviceLAMP.set(false);
       } else {
         isActive ? devicePUMP.set(1) : devicePUMP.set(0);
       }
     });
+  }
+
+  void getStateActive() {
+    if (widget.title == 'ALARM') {
+      detectActiveALARM.onValue.listen(
+        (event) {
+          if (mounted) {
+            setState(() {
+              dataALARMDetect = event.snapshot.value.toString();
+            });
+          }
+        },
+      );
+    } else if (widget.title == 'LAMP') {
+      detectActiveLAMP.onValue.listen(
+        (event) {
+          if (mounted) {
+            setState(() {
+              dataLAMPDetect = event.snapshot.value.toString();
+            });
+          }
+        },
+      );
+    } else {
+      detectActivePUMP.onValue.listen(
+        (event) {
+          if (mounted) {
+            setState(() {
+              dataPUMPDetect = event.snapshot.value.toString();
+            });
+          }
+        },
+      );
+    }
+  }
+
+  Color returnColor() {
+    getStateActive();
+    if (!isActive) {
+      return Colors.white;
+    } else {
+      if (widget.title == 'ALARM') {
+        int data = int.parse(dataALARMDetect);
+        return (data == 1) ? (Colors.green) : (Colors.grey);
+      } else {}
+      if (widget.title == 'LAMP') {
+        int data = int.parse(dataLAMPDetect);
+        return (data == 1) ? (Colors.green) : (Colors.grey);
+      } else {
+        int data = int.parse(dataPUMPDetect);
+        return (data == 1) ? (Colors.green) : (Colors.grey);
+      }
+    }
   }
 
   @override
@@ -100,7 +164,7 @@ class _FanWidgetState extends State<FanWidget> {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: isActive ? Colors.green : Colors.white,
+              color: returnColor(),
               borderRadius: BorderRadius.circular(18),
             ),
             child: Image.asset(
@@ -135,9 +199,6 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
   final DatabaseReference databaseTEMP =
       FirebaseDatabase.instance.ref('Room1/SENSORS').child('Temperature');
 
-  /* syntax for collect data in Fire store */
-  //final CollectionReference abc = FirebaseFirestore.instance.collection('ac');
-
   void sendGasToFireStore(String fieldName, int value) {
     Map<String, dynamic> userData = {
       fieldName: value,
@@ -157,14 +218,6 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
         .update(userData);
   }
 
-  /* void sendDataToFirestorePeriodically(int value) {
-    Timer.periodic(const Duration(minutes: 1), (timer) async {
-      FirebaseFirestore.instance.collection('ROOM 1').doc('Gas').set({
-        'Gas': value,
-      });
-    });
-  } */
-
   final DatabaseReference databaseGAS =
       FirebaseDatabase.instance.ref('Room1/SENSORS').child('Gas');
 
@@ -174,44 +227,6 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
   final DatabaseReference databaseTEMPThreshold = FirebaseDatabase.instance
       .ref('Room1/SETTINGS')
       .child('Temperature Threshold');
-
-  /* function for confirm when user want to change data TEMP threshold */
-  void _showConfirmationDialogTemp(double newValue) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirmation',
-              style: TextStyle(
-                fontSize: 25,
-                fontWeight: FontWeight.bold,
-              )),
-          content: Text(
-              'Do you want to set the value of Threshold Temparature to ${newValue.toInt()}°C?',
-              style: const TextStyle(
-                fontSize: 18,
-              )),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                showPasswordDialogTEMP(newValue);
-              },
-              child: const Text('Yes'),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  tempThreshold = _dtemp;
-                });
-                Navigator.of(context).pop();
-              },
-              child: const Text('No'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   void showPasswordDialogTEMP(double newValue) {
     String enteredPassword = '';
@@ -264,15 +279,52 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
     );
   }
 
+  /* function for confirm when user want to change data TEMP threshold */
+  void _showConfirmationDialogTemp(double newValue) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmation',
+              style: TextStyle(
+                fontSize: 25,
+                fontWeight: FontWeight.bold,
+              )),
+          content: Text(
+              'Do you want to set the value of Threshold Temparature to ${newValue.toInt()}°C?',
+              style: const TextStyle(
+                fontSize: 18,
+              )),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                showPasswordDialogTEMP(newValue);
+              },
+              child: const Text('Yes'),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  tempThreshold = _dtemp;
+                });
+                Navigator.of(context).pop();
+              },
+              child: const Text('No'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> fetchDocumentFromFirestore(String day) async {
     DocumentSnapshot documentSnapshot =
         await FirebaseFirestore.instance.collection('ROOM 1').doc('GAS').get();
     String date;
 
     if (documentSnapshot.exists) {
-      for (int i = 12; i < 13; i++) {
-        for (int j = 20; j < 24; j++) {
-          //date = day + '-' + i.toString() + ':' + j.toString();
+      for (int i = 15; i < 16; i++) {
+        for (int j = 0; j < 60; j++) {
           date =
               "$day-${i.toString().padLeft(2, '0')}:${j.toString().padLeft(2, '0')}";
           int? field1 = documentSnapshot[date];
@@ -306,7 +358,7 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
             TextButton(
               onPressed: () {
                 showPasswordDialogGAS(newValue);
-                fetchDocumentFromFirestore('2024.4.29');
+                fetchDocumentFromFirestore("2024.05.05");
               },
               child: const Text('Yes'),
             ),
@@ -462,7 +514,7 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
 
     //sendDataToFirestorePeriodically(gasVal);
     /* process data to DTB */
-    DateTime now = DateTime.now();
+    /* DateTime now = DateTime.now();
     int sec = now.second;
 
     if (sec == 59) {
@@ -483,7 +535,7 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
         sendTempToFireStore(dateString, value);
       } else
         sendTempToFireStore(dateString, tempVal);
-    }
+    } */
 
     return Scaffold(
       backgroundColor: Colors.indigo.shade50,
@@ -739,9 +791,8 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
       radius: radiusValue.toDouble(),
       lineWidth: 14,
       percent: value / 100,
-      backgroundColor: Colors.grey, // Set background color to show the gradient
-      linearGradient: gradient, // Set linearGradient to the created gradient
-      //progressColor: color,
+      backgroundColor: Colors.grey,
+      linearGradient: gradient,
       center: Text(
         value.toString() + '\u00B0', // assign from value to string in Dart
         style: const TextStyle(
