@@ -6,7 +6,9 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async'; /* for count time */
 
-import 'package:flutter_smart_home/room/camera.dart'; // camera template
+import 'package:flutter_smart_home/camera.dart'; // camera template
+import 'package:flutter_smart_home/dtb/dtb_bedroom.dart'; // database template
+//import 'package:flutter_smart_home/dtb/dtb_kitchen.dart'; // database template
 
 class Energy extends StatefulWidget {
   const Energy({Key? key}) : super(key: key);
@@ -358,7 +360,7 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
             TextButton(
               onPressed: () {
                 showPasswordDialogGAS(newValue);
-                fetchDocumentFromFirestore("2024.05.05");
+                //fetchDocumentFromFirestore("2024.05.05");
               },
               child: const Text('Yes'),
             ),
@@ -512,31 +514,6 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
       },
     );
 
-    //sendDataToFirestorePeriodically(gasVal);
-    /* process data to DTB */
-    /* DateTime now = DateTime.now();
-    int sec = now.second;
-
-    if (sec == 59) {
-      int min = now.minute;
-      print('$min:$sec');
-      //fetchDocumentFromFirestore('2024.4.28');
-      String dateString =
-          "${now.year}.${now.month}.${now.day}-${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-
-      if (gasVal >= gasThreshold) {
-        int value = gasVal * 100 + gasThreshold;
-        sendGasToFireStore(dateString, value);
-      } else
-        sendGasToFireStore(dateString, gasVal);
-
-      if (tempVal >= tempThreshold) {
-        int value = tempVal * 100 + tempThreshold;
-        sendTempToFireStore(dateString, value);
-      } else
-        sendTempToFireStore(dateString, tempVal);
-    } */
-
     return Scaffold(
       backgroundColor: Colors.indigo.shade50,
       body: SafeArea(
@@ -556,34 +533,38 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
                     child: const Icon(Icons.arrow_back_ios_new,
                         color: Colors.black),
                   ),
-                  /* const SizedBox(height: 50), */
-                  const Expanded(
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: Text(
-                        'BEDROOM',
-                        style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
-                    ),
+                  const Text(
+                    'BEDROOM',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
+                  PopupMenuButton(
+                    icon: const Icon(Icons.menu),
+                    itemBuilder: (BuildContext context) => [
+                      const PopupMenuItem(
+                        child: Text('Check data'),
+                        value: 'Option 1',
+                      ),
+                      const PopupMenuItem(
+                        child: Text('Camera'),
+                        value: 'Option 2',
+                      ),
+                    ],
+                    onSelected: (value) {
+                      if (value == 'Option 1') {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => const Camera(),
-                          ),
+                          MaterialPageRoute(builder: (context) => Database()),
                         );
-                      },
-                      child: const Icon(Icons.arrow_back_ios_new,
-                          color: Colors.black),
-                    ),
+                      } else if (value == 'Option 2') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => Camera()),
+                        );
+                      }
+                    },
                   ),
                 ],
               ),
-              /* const SizedBox(height: 25), */
               Expanded(
                 child: ListView(
                   physics: const BouncingScrollPhysics(),
