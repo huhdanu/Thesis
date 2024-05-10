@@ -10,11 +10,11 @@ import 'package:flutter_smart_home/camera.dart'; // camera template
 import 'package:flutter_smart_home/dtb/dtb_bedroom.dart'; // database template
 //import 'package:flutter_smart_home/dtb/dtb_kitchen.dart'; // database template
 
-class Energy extends StatefulWidget {
-  const Energy({Key? key}) : super(key: key);
+class Bedroom extends StatefulWidget {
+  const Bedroom({Key? key}) : super(key: key);
 
   @override
-  _Energy createState() => _Energy();
+  _Bedroom createState() => _Bedroom();
 }
 
 class FanWidget extends StatefulWidget {
@@ -153,6 +153,25 @@ class _FanWidgetState extends State<FanWidget> {
     }
   }
 
+  Widget getImage() {
+    if (widget.title == 'ALARM') {
+      return Image.asset(
+          isActive ? 'assets/images/fan-2.png' : 'assets/images/fan-1.png');
+    } else if (widget.title == 'LAMP') {
+      return Image.asset(
+        isActive ? 'assets/images/light_on.png' : 'assets/images/light_off.png',
+        width: 40,
+        height: 40,
+      );
+    } else {
+      return Image.asset(
+        isActive ? 'assets/images/pump_on.png' : 'assets/images/pump_off.png',
+        width: 40,
+        height: 40,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     getStateDevices();
@@ -169,9 +188,7 @@ class _FanWidgetState extends State<FanWidget> {
               color: returnColor(),
               borderRadius: BorderRadius.circular(18),
             ),
-            child: Image.asset(
-              isActive ? 'assets/images/fan-2.png' : 'assets/images/fan-1.png',
-            ),
+            child: getImage(),
           ),
           const SizedBox(height: 15),
           Text(
@@ -186,7 +203,7 @@ class _FanWidgetState extends State<FanWidget> {
   }
 }
 
-class _Energy extends State<Energy> with WidgetsBindingObserver {
+class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
   int _dtemp = 0; // temp variable
   int _dgas = 0; // temp humidity
 
@@ -196,6 +213,9 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
   int gasThreshold = 30;
   int tempThreshold = 20;
   bool flagSendData = false;
+
+  bool _sliderChangingGAS = false;
+  bool _sliderChangingTEMP = false;
 
   /* syntax for CRUD data in Realtime database */
   final DatabaseReference databaseTEMP =
@@ -360,7 +380,6 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
             TextButton(
               onPressed: () {
                 showPasswordDialogGAS(newValue);
-                //fetchDocumentFromFirestore("2024.05.05");
               },
               child: const Text('Yes'),
             ),
@@ -431,40 +450,6 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
   }
 
   @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.paused) {
-      /* process data to DTB */
-      DateTime now = DateTime.now();
-      int sec = now.second;
-      int min = now.minute;
-      print('$min:$sec');
-      if (sec == 59) {
-        String dateString =
-            "${now.year}.${now.month}.${now.day}-${now.hour}:${now.minute}";
-
-        if (gasVal >= gasThreshold) {
-          int value = gasVal * 100 + gasThreshold;
-          sendGasToFireStore(dateString, value);
-        } else
-          sendGasToFireStore(dateString, gasVal);
-
-        if (tempVal >= tempThreshold) {
-          int value = tempVal * 100 + tempThreshold;
-          sendTempToFireStore(dateString, value);
-        } else
-          sendTempToFireStore(dateString, tempVal);
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     /* get data for TEMP sensor */
     databaseTEMP.onValue.listen(
@@ -493,11 +478,13 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
     /* get data GAS threshold */
     databaseGASThreshold.onValue.listen(
       (event) {
-        if (mounted) {
-          setState(() {
-            String gasThrehold_ = event.snapshot.value.toString();
-            gasThreshold = int.parse(gasThrehold_);
-          });
+        if (!_sliderChangingGAS) {
+          if (mounted) {
+            setState(() {
+              String gasThrehold_ = event.snapshot.value.toString();
+              gasThreshold = int.parse(gasThrehold_);
+            });
+          }
         }
       },
     );
@@ -505,11 +492,13 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
     /* get data TEMP threshold */
     databaseTEMPThreshold.onValue.listen(
       (event) {
-        if (mounted) {
-          setState(() {
-            String tempThrehold_ = event.snapshot.value.toString();
-            tempThreshold = int.parse(tempThrehold_);
-          });
+        if (!_sliderChangingTEMP) {
+          if (mounted) {
+            setState(() {
+              String tempThrehold_ = event.snapshot.value.toString();
+              tempThreshold = int.parse(tempThrehold_);
+            });
+          }
         }
       },
     );
@@ -629,14 +618,17 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
                             value: tempThreshold.toDouble(),
                             onChangeStart: (newValue) {
                               _dtemp = tempThreshold;
+                              _sliderChangingTEMP = true;
                             },
                             onChanged: (newValue) {
                               setState(() {
                                 tempThreshold = newValue.toInt();
+                                _sliderChangingTEMP = true;
                               });
                             },
                             onChangeEnd: (newValue) {
                               _showConfirmationDialogTemp(newValue);
+                              _sliderChangingTEMP = false;
                             },
                             max: 90,
                             min: 0,
@@ -648,7 +640,7 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
                               children: [
                                 Text('10°C'),
                                 Text('50°C'),
-                                Text('99°C'),
+                                Text('90°C'),
                               ],
                             ),
                           )
@@ -689,14 +681,18 @@ class _Energy extends State<Energy> with WidgetsBindingObserver {
                             value: (gasThreshold.toDouble()),
                             onChangeStart: (newValue) {
                               _dgas = gasThreshold;
+                              _sliderChangingGAS = true;
                             },
                             onChanged: (newValue) {
                               setState(() {
                                 gasThreshold = newValue.toInt();
+                                _sliderChangingGAS = true;
                               });
                             },
                             onChangeEnd: (newValue) {
+                              gasThreshold = newValue.toInt();
                               _showConfirmationDialogGAS(newValue);
+                              _sliderChangingGAS = false;
                             },
                             max: 100,
                             min: 0,

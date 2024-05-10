@@ -193,8 +193,11 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 32),
                     Center(
                       child: Image.asset(
-                        'assets/images/banner.png',
-                        scale: 1.2,
+                        /* 'assets/images/banner.png', */
+                        'assets/images/logo.png',
+                        width: 200,
+                        height: 200,
+                        scale: 0.5,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -219,7 +222,7 @@ class _HomePageState extends State<HomePage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const Energy(),
+                                builder: (context) => const Bedroom(),
                               ),
                             );
                           },

@@ -1,11 +1,13 @@
-/* import 'package:flutter/cupertino.dart';
-import 'package:flutter/painting.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart'; */
+import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async'; /* for count time */
+
+import 'package:flutter_smart_home/camera.dart'; // camera template
+import 'package:flutter_smart_home/dtb/dtb_kitchen.dart'; // database template
 
 class Kitchen extends StatefulWidget {
   const Kitchen({Key? key}) : super(key: key);
@@ -24,15 +26,25 @@ class FanWidget extends StatefulWidget {
 }
 
 class _FanWidgetState extends State<FanWidget> {
+  String dataALARMDetect = '0', dataLAMPDetect = '0', dataPUMPDetect = '0';
   bool isActive = false;
 
   final DatabaseReference deviceALARM =
       FirebaseDatabase.instance.ref('ROOM2/DEVICES').child('Alarm');
 
-  final DatabaseReference deviceLARM =
+  final DatabaseReference deviceLAMP =
       FirebaseDatabase.instance.ref('ROOM2/DEVICES').child('Lamp');
 
   final DatabaseReference devicePUMP = FirebaseDatabase.instance.ref('Pump');
+
+  final DatabaseReference detectActiveALARM =
+      FirebaseDatabase.instance.ref('ACTIVE/IsAlarmActiveRoom2');
+
+  final DatabaseReference detectActiveLAMP =
+      FirebaseDatabase.instance.ref('ACTIVE/IsLampActiveRoom2');
+
+  final DatabaseReference detectActivePUMP =
+      FirebaseDatabase.instance.ref('ACTIVE/IsPumpActive');
 
   void getStateDevices() {
     if (widget.title == 'ALARM') {
@@ -48,7 +60,7 @@ class _FanWidgetState extends State<FanWidget> {
         },
       );
     } else if (widget.title == 'LAMP') {
-      deviceLARM.onValue.listen(
+      deviceLAMP.onValue.listen(
         (event) {
           if (mounted) {
             setState(() {
@@ -80,11 +92,83 @@ class _FanWidgetState extends State<FanWidget> {
       if (widget.title == 'ALARM') {
         isActive ? deviceALARM.set(true) : deviceALARM.set(false);
       } else if (widget.title == 'LAMP') {
-        isActive ? deviceLARM.set(true) : deviceLARM.set(false);
+        isActive ? deviceLAMP.set(true) : deviceLAMP.set(false);
       } else {
         isActive ? devicePUMP.set(1) : devicePUMP.set(0);
       }
     });
+  }
+
+  void getStateActive() {
+    if (widget.title == 'ALARM') {
+      detectActiveALARM.onValue.listen(
+        (event) {
+          if (mounted) {
+            setState(() {
+              dataALARMDetect = event.snapshot.value.toString();
+            });
+          }
+        },
+      );
+    } else if (widget.title == 'LAMP') {
+      detectActiveLAMP.onValue.listen(
+        (event) {
+          if (mounted) {
+            setState(() {
+              dataLAMPDetect = event.snapshot.value.toString();
+            });
+          }
+        },
+      );
+    } else {
+      detectActivePUMP.onValue.listen(
+        (event) {
+          if (mounted) {
+            setState(() {
+              dataPUMPDetect = event.snapshot.value.toString();
+            });
+          }
+        },
+      );
+    }
+  }
+
+  Color returnColor() {
+    getStateActive();
+    if (!isActive) {
+      return Colors.white;
+    } else {
+      if (widget.title == 'ALARM') {
+        int data = int.parse(dataALARMDetect);
+        return (data == 1) ? (Colors.green) : (Colors.grey);
+      } else {}
+      if (widget.title == 'LAMP') {
+        int data = int.parse(dataLAMPDetect);
+        return (data == 1) ? (Colors.green) : (Colors.grey);
+      } else {
+        int data = int.parse(dataPUMPDetect);
+        return (data == 1) ? (Colors.green) : (Colors.grey);
+      }
+    }
+  }
+
+  Widget getImage() {
+    if (widget.title == 'ALARM') {
+      return Image.asset(
+          isActive ? 'assets/images/fan-2.png' : 'assets/images/fan-1.png');
+    } else if (widget.title == 'LAMP') {
+      return Image.asset(
+        isActive ? 'assets/images/light_on.png' : 'assets/images/light_off.png',
+        width: 40,
+        height: 40,
+      );
+    } else {
+      return Image.asset(
+        isActive ? 'assets/images/pump_on.png' : 'assets/images/pump_off.png',
+        width: 40,
+        height: 40,
+      );
+    }
   }
 
   @override
@@ -100,12 +184,10 @@ class _FanWidgetState extends State<FanWidget> {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: isActive ? Colors.green : Colors.white,
+              color: returnColor(),
               borderRadius: BorderRadius.circular(18),
             ),
-            child: Image.asset(
-              isActive ? 'assets/images/fan-2.png' : 'assets/images/fan-1.png',
-            ),
+            child: getImage(),
           ),
           const SizedBox(height: 15),
           Text(
@@ -120,23 +202,44 @@ class _FanWidgetState extends State<FanWidget> {
   }
 }
 
-class _Kitchen extends State<Kitchen> {
+class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
   int _dtemp = 0; // temp variable
   int _dgas = 0; // temp humidity
 
   /* variable for get data from Firebase */
-  int tempVal = 25;
-  int humVal = 25;
+  int tempVal = 0;
+  int gasVal = 0;
   int gasThreshold = 30;
   int tempThreshold = 20;
-
   bool flagSendData = false;
 
   /*  */
+  bool _sliderChangingGAS = false;
+  bool _sliderChangingTEMP = false;
+  /* syntax for CRUD data in Realtime database */
   final DatabaseReference databaseTEMP =
       FirebaseDatabase.instance.ref('ROOM2/SENSORS').child('Temperature');
 
-  final DatabaseReference databaseHUM =
+  void sendGasToFireStore(String fieldName, int value) {
+    Map<String, dynamic> userData = {
+      fieldName: value,
+    };
+
+    FirebaseFirestore.instance.collection('ROOM 2').doc('GAS').update(userData);
+  }
+
+  void sendTempToFireStore(String fieldName, int value) {
+    Map<String, dynamic> userData = {
+      fieldName: value,
+    };
+
+    FirebaseFirestore.instance
+        .collection('ROOM 2')
+        .doc('TEMP')
+        .update(userData);
+  }
+
+  final DatabaseReference databaseGAS =
       FirebaseDatabase.instance.ref('ROOM2/SENSORS').child('Gas');
 
   final DatabaseReference databaseGASThreshold =
@@ -145,44 +248,6 @@ class _Kitchen extends State<Kitchen> {
   final DatabaseReference databaseTEMPThreshold = FirebaseDatabase.instance
       .ref('ROOM2/SETTINGS')
       .child('Temperature Threshold');
-
-  /* function for confirm when user want to change data TEMP threshold */
-  void _showConfirmationDialogTemp(double newValue) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirmation',
-              style: TextStyle(
-                fontSize: 25,
-                fontWeight: FontWeight.bold,
-              )),
-          content: Text(
-              'Do you want to set the value of Threshold Temparature to ${newValue.toInt()}°C?',
-              style: const TextStyle(
-                fontSize: 18,
-              )),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                showPasswordDialogTEMP(newValue);
-              },
-              child: const Text('Yes'),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  tempThreshold = _dtemp;
-                });
-                Navigator.of(context).pop();
-              },
-              child: const Text('No'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   void showPasswordDialogTEMP(double newValue) {
     String enteredPassword = '';
@@ -235,8 +300,67 @@ class _Kitchen extends State<Kitchen> {
     );
   }
 
+  /* function for confirm when user want to change data TEMP threshold */
+  void _showConfirmationDialogTemp(double newValue) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmation',
+              style: TextStyle(
+                fontSize: 25,
+                fontWeight: FontWeight.bold,
+              )),
+          content: Text(
+              'Do you want to set the value of Threshold Temparature to ${newValue.toInt()}°C?',
+              style: const TextStyle(
+                fontSize: 18,
+              )),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                showPasswordDialogTEMP(newValue);
+              },
+              child: const Text('Yes'),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  tempThreshold = _dtemp;
+                });
+                Navigator.of(context).pop();
+              },
+              child: const Text('No'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> fetchDocumentFromFirestore(String day) async {
+    DocumentSnapshot documentSnapshot =
+        await FirebaseFirestore.instance.collection('ROOM 2').doc('GAS').get();
+    String date;
+
+    if (documentSnapshot.exists) {
+      for (int i = 15; i < 16; i++) {
+        for (int j = 0; j < 60; j++) {
+          date =
+              "$day-${i.toString().padLeft(2, '0')}:${j.toString().padLeft(2, '0')}";
+          int? field1 = documentSnapshot[date];
+          if (field1 != null) {
+            print('$date: $field1');
+          }
+        }
+      }
+    } else {
+      print('Document does not exist');
+    }
+  }
+
   /* function for confirm when user want to change data GAS threshold */
-  void showConfirmationDialogGAS(double newValue) {
+  void _showConfirmationDialogGAS(double newValue) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -255,6 +379,7 @@ class _Kitchen extends State<Kitchen> {
             TextButton(
               onPressed: () {
                 showPasswordDialogGAS(newValue);
+                //fetchDocumentFromFirestore("2024.05.05");
               },
               child: const Text('Yes'),
             ),
@@ -338,13 +463,13 @@ class _Kitchen extends State<Kitchen> {
       },
     );
 
-    /* get data for HUM sensor */
-    databaseHUM.onValue.listen(
+    /* get data for GAS sensor */
+    databaseGAS.onValue.listen(
       (event) {
         if (mounted) {
           setState(() {
-            String humVal_ = event.snapshot.value.toString();
-            humVal = int.parse(humVal_);
+            String gasVal_ = event.snapshot.value.toString();
+            gasVal = int.parse(gasVal_);
           });
         }
       },
@@ -353,11 +478,13 @@ class _Kitchen extends State<Kitchen> {
     /* get data GAS threshold */
     databaseGASThreshold.onValue.listen(
       (event) {
-        if (mounted) {
-          setState(() {
-            String gasThrehold_ = event.snapshot.value.toString();
-            gasThreshold = int.parse(gasThrehold_);
-          });
+        if (!_sliderChangingGAS) {
+          if (mounted) {
+            setState(() {
+              String gasThrehold_ = event.snapshot.value.toString();
+              gasThreshold = int.parse(gasThrehold_);
+            });
+          }
         }
       },
     );
@@ -365,11 +492,13 @@ class _Kitchen extends State<Kitchen> {
     /* get data TEMP threshold */
     databaseTEMPThreshold.onValue.listen(
       (event) {
-        if (mounted) {
-          setState(() {
-            String tempThrehold_ = event.snapshot.value.toString();
-            tempThreshold = int.parse(tempThrehold_);
-          });
+        if (_sliderChangingTEMP) {
+          if (mounted) {
+            setState(() {
+              String tempThrehold_ = event.snapshot.value.toString();
+              tempThreshold = int.parse(tempThrehold_);
+            });
+          }
         }
       },
     );
@@ -393,20 +522,38 @@ class _Kitchen extends State<Kitchen> {
                     child: const Icon(Icons.arrow_back_ios_new,
                         color: Colors.black),
                   ),
-                  const SizedBox(height: 50),
-                  const Expanded(
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: Text(
-                        'KITCHEN',
-                        style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold),
+                  const Text(
+                    'KITCHEN',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  PopupMenuButton(
+                    icon: const Icon(Icons.menu),
+                    itemBuilder: (BuildContext context) => [
+                      const PopupMenuItem(
+                        child: Text('Check data'),
+                        value: 'Option 1',
                       ),
-                    ),
+                      const PopupMenuItem(
+                        child: Text('Camera'),
+                        value: 'Option 2',
+                      ),
+                    ],
+                    onSelected: (value) {
+                      if (value == 'Option 1') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => Database()),
+                        );
+                      } else if (value == 'Option 2') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => Camera()),
+                        );
+                      }
+                    },
                   ),
                 ],
               ),
-              const SizedBox(height: 25),
               Expanded(
                 child: ListView(
                   physics: const BouncingScrollPhysics(),
@@ -423,9 +570,9 @@ class _Kitchen extends State<Kitchen> {
                         ),
                         const SizedBox(width: 35),
                         circle(
-                          title: 'Humidity',
+                          title: 'Gas',
                           radiusValue: 70,
-                          value: humVal,
+                          value: gasVal,
                         ),
                       ],
                     ),
@@ -433,7 +580,7 @@ class _Kitchen extends State<Kitchen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _roundedButton(title: 'Temparature', valueHori: 30),
+                        _roundedButton(title: 'Temperature', valueHori: 30),
                         _roundedButton(title: 'Gas', valueHori: 75),
                       ],
                     ),
@@ -471,17 +618,20 @@ class _Kitchen extends State<Kitchen> {
                             value: tempThreshold.toDouble(),
                             onChangeStart: (newValue) {
                               _dtemp = tempThreshold;
+                              _sliderChangingTEMP = true;
                             },
                             onChanged: (newValue) {
                               setState(() {
                                 tempThreshold = newValue.toInt();
+                                _sliderChangingTEMP = true;
                               });
                             },
                             onChangeEnd: (newValue) {
                               _showConfirmationDialogTemp(newValue);
+                              _sliderChangingTEMP = false;
                             },
                             max: 90,
-                            min: 20,
+                            min: 0,
                           ),
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 24),
@@ -531,17 +681,19 @@ class _Kitchen extends State<Kitchen> {
                             value: (gasThreshold.toDouble()),
                             onChangeStart: (newValue) {
                               _dgas = gasThreshold;
+                              _sliderChangingGAS = true;
                             },
                             onChanged: (newValue) {
                               setState(() {
                                 gasThreshold = newValue.toInt();
-                                // send data 2 firebase
+                                _sliderChangingGAS = true;
                               });
                             },
                             onChangeEnd: (newValue) {
-                              showConfirmationDialogGAS(newValue);
+                              _showConfirmationDialogGAS(newValue);
+                              _sliderChangingGAS = false;
                             },
-                            max: 99,
+                            max: 100,
                             min: 0,
                           ),
                           const Padding(
@@ -611,23 +763,12 @@ class _Kitchen extends State<Kitchen> {
       end: Alignment.centerLeft,
     );
 
-    /* Color color;
-
-    if (value <= 38) {
-      color = Colors.green; 
-    } else if (value < 50) {
-      color = Colors.yellow; 
-    } else {
-      color = Colors.red; 
-    } */
-
     return CircularPercentIndicator(
       radius: radiusValue.toDouble(),
       lineWidth: 14,
       percent: value / 100,
-      backgroundColor: Colors.grey, // Set background color to show the gradient
-      linearGradient: gradient, // Set linearGradient to the created gradient
-      //progressColor: color,
+      backgroundColor: Colors.grey,
+      linearGradient: gradient,
       center: Text(
         value.toString() + '\u00B0', // assign from value to string in Dart
         style: const TextStyle(
