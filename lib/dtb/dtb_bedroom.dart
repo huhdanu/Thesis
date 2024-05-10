@@ -17,18 +17,109 @@ class _MyAppState extends State<Database> {
   bool isShow = false;
   String? dataShow = "";
 
-  void handleDataSelectedDay(String date) {
-    setState(() {
-      selectedDate = date;
-      isSelected = true;
-    });
-  }
-
   void handleDataSelectedData(String? data) {
     setState(() {
       dataShow = data;
       isShow = true;
     });
+  }
+
+  /* declare variable for function get one day */
+  String stringToShow = "";
+
+  void _showDatePicker() async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2024, 4, 1),
+      lastDate: DateTime.now(),
+    );
+    if (pickedDate != null) {
+      setState(() {
+        DateTime strReceive = pickedDate;
+        selectedDate = formattedDate(strReceive);
+        stringToShow = formattedToShow(strReceive);
+        isSelected = true;
+      });
+    }
+  }
+
+  String formattedDate(DateTime date) {
+    return DateFormat('yyyy.MM.dd').format(date);
+  }
+
+  String formattedToShow(DateTime date) {
+    return DateFormat('dd.MM.yyyy').format(date);
+  }
+
+  /* declare variable for function get range day */
+  DateTime? _startDate;
+  DateTime? _endDate;
+
+  bool _isNotInRange(DateTime day) {
+    return _startDate != null &&
+        _endDate != null &&
+        !day.isAtSameMomentAs(_startDate!) &&
+        !day.isAtSameMomentAs(_endDate!) &&
+        !day.isAfter(_startDate!) &&
+        !day.isBefore(_endDate!);
+  }
+
+  Future<void> _selectDateRange(BuildContext context) async {
+    final DateTime? pickedStartDate = await showDatePicker(
+      context: context,
+      initialDate: _startDate ?? DateTime.now(),
+      firstDate: DateTime(2024, 4, 1),
+      lastDate: DateTime.now(),
+      selectableDayPredicate: (day) =>
+          _startDate == null || _endDate == null || !_isNotInRange(day),
+    );
+    if (pickedStartDate != null) {
+      final DateTime? pickedEndDate = await showDatePicker(
+        context: context,
+        initialDate: _endDate ?? pickedStartDate,
+        firstDate: pickedStartDate,
+        lastDate: DateTime.now(),
+        selectableDayPredicate: (day) =>
+            _startDate == null || _endDate == null || !_isNotInRange(day),
+      );
+      if (pickedEndDate != null) {
+        final daysInRange = pickedEndDate.difference(pickedStartDate).inDays;
+        if (daysInRange > 30) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Error'),
+              content: const Text(
+                  'Please select a date range of no more than 30 days.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          setState(() {
+            _startDate = pickedStartDate;
+            _endDate = pickedEndDate;
+            String a = formattedToShow(_startDate!);
+            String b = formattedToShow(_endDate!);
+            stringToShow = '$a - $b';
+          });
+        }
+      }
+    }
+  }
+
+  /*  */
+  Color getDotColor(FlSpot spot) {
+    if (spot.y > 60) {
+      return Colors.red;
+    } else {
+      return Colors.green;
+    }
   }
 
   @override
@@ -51,7 +142,6 @@ class _MyAppState extends State<Database> {
                           child: const Icon(Icons.arrow_back_ios_new,
                               color: Colors.black),
                         ),
-                        /* const SizedBox(height: 50), */
                         const Expanded(
                           child: Align(
                             alignment: Alignment.center,
@@ -68,9 +158,37 @@ class _MyAppState extends State<Database> {
                     Row(children: [
                       const SizedBox(width: 20),
                       MyButton(onSelectOption: handleDataSelectedData),
-                      const SizedBox(width: 50),
-                      DatePickerWidget(onDateSelected: handleDataSelectedDay),
+                      const SizedBox(width: 150),
+                      /*  DatePickerWidget(onDateSelected: handleDataSelectedDay), */
+                      PopupMenuButton(
+                        icon: const Icon(Icons.calendar_month),
+                        itemBuilder: (BuildContext context) => [
+                          const PopupMenuItem(
+                            child: Text('Select day'),
+                            value: 'Option 1',
+                          ),
+                          const PopupMenuItem(
+                            child: Text('Select range day'),
+                            value: 'Option 2',
+                          ),
+                        ],
+                        onSelected: (value) {
+                          if (value == 'Option 1') {
+                            _showDatePicker();
+                          } else if (value == 'Option 2') {
+                            _selectDateRange(context);
+                          }
+                        },
+                      ),
                     ]),
+                    Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        stringToShow,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w500),
+                      ),
+                    ),
                     Expanded(
                         child: Align(
                             alignment: Alignment.center,
@@ -106,7 +224,7 @@ class _MyButtonState extends State<MyButton> {
 
     return DropdownButton<String>(
       value: _selectedOption,
-      hint: const Text('Select an option'),
+      hint: const Text('Select data'),
       onChanged: (String? newValue) {
         setState(() {
           _selectedOption = newValue;
@@ -123,70 +241,7 @@ class _MyButtonState extends State<MyButton> {
   }
 }
 
-/* widget for select day */
-class DatePickerWidget extends StatefulWidget {
-  final Function(String) onDateSelected;
-
-  DatePickerWidget({required this.onDateSelected});
-
-  @override
-  _DatePickerWidgetState createState() => _DatePickerWidgetState();
-}
-
-class _DatePickerWidgetState extends State<DatePickerWidget> {
-  String selectedDate = "";
-  String stringToShow = "";
-
-  void _showDatePicker() async {
-    DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2024, 4, 1),
-      lastDate: DateTime.now(),
-    );
-    if (pickedDate != null) {
-      setState(() {
-        DateTime strReceive = pickedDate;
-        selectedDate = formattedDate(strReceive);
-        stringToShow = formattedToShow(strReceive);
-        /* callback func to out of widget use */
-        widget.onDateSelected(selectedDate);
-      });
-    }
-  }
-
-  String formattedDate(DateTime date) {
-    return DateFormat('yyyy.MM.dd').format(date);
-  }
-
-  String formattedToShow(DateTime date) {
-    return DateFormat('dd.MM.yyyy').format(date);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Column(
-        children: [
-          ElevatedButton(
-            onPressed: _showDatePicker,
-            child: const Text(
-              "Select day",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-            ),
-          ),
-          const SizedBox(height: 7),
-          Text(
-            stringToShow,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
+/*  */
 class LineChartWidget extends StatelessWidget {
   final int numberOfPoints = 25;
   final double chartMinY = 0;
@@ -322,6 +377,14 @@ class LineChartWidget extends StatelessWidget {
     }
   }
 
+  bool showSpot() {
+    if (spot.y > 60) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (acceptToDraw == true) {
@@ -358,7 +421,7 @@ class LineChartWidget extends StatelessWidget {
                             isStrokeCapRound: true,
                             belowBarData: BarAreaData(show: false),
                             dotData: const FlDotData(
-                              show: false,
+                              show: true,
                             ),
                           )
                         ],

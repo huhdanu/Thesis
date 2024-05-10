@@ -175,7 +175,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                             ),
                                             Text(
                                               'Live | $_timeString',
-                                              style: TextStyle(
+                                              style: const TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.bold),
