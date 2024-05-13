@@ -106,6 +106,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        const SizedBox(width: 20),
                         GestureDetector(
                           onTap: () {
                             Navigator.pop(context);

@@ -1,6 +1,7 @@
 import 'dart:ffi';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -526,31 +527,17 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
                     'BEDROOM',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
-                  PopupMenuButton(
-                    icon: const Icon(Icons.menu),
-                    itemBuilder: (BuildContext context) => [
-                      const PopupMenuItem(
-                        child: Text('Check data'),
-                        value: 'Option 1',
-                      ),
-                      const PopupMenuItem(
-                        child: Text('Camera'),
-                        value: 'Option 2',
-                      ),
-                    ],
-                    onSelected: (value) {
-                      if (value == 'Option 1') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => Database()),
-                        );
-                      } else if (value == 'Option 2') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => Camera()),
-                        );
-                      }
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => Camera()),
+                      );
                     },
+                    child: const Icon(
+                      Icons.video_camera_back_outlined,
+                      color: Colors.black,
+                    ),
                   ),
                 ],
               ),
@@ -764,17 +751,38 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
       end: Alignment.centerLeft,
     );
 
-    return CircularPercentIndicator(
-      radius: radiusValue.toDouble(),
-      lineWidth: 14,
-      percent: value / 100,
-      backgroundColor: Colors.grey,
-      linearGradient: gradient,
-      center: Text(
-        value.toString() + '\u00B0', // assign from value to string in Dart
-        style: const TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
+    return GestureDetector(
+      onTap: () {
+        if (title == 'Temparature') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => Database(
+                      dataShow: title,
+                    )),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => Database(
+                      dataShow: title,
+                    )),
+          );
+        }
+      },
+      child: CircularPercentIndicator(
+        radius: radiusValue.toDouble(),
+        lineWidth: 14,
+        percent: value / 100,
+        backgroundColor: Colors.grey,
+        linearGradient: gradient,
+        center: Text(
+          value.toString() + '\u00B0', // assign from value to string in Dart
+          style: const TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -785,18 +793,33 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
     required double valueHori,
   }) {
     return GestureDetector(
+        onTap: () {
+          if (title == "Temperature") {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => Database(dataShow: title)),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => Database(dataShow: title)),
+            );
+          }
+        },
         child: Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: valueHori,
-      ),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: Colors.pink,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    ));
+          padding: EdgeInsets.symmetric(
+            horizontal: valueHori,
+          ),
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: Colors.pink,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ));
   }
 }

@@ -7,17 +7,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async'; /* for count time */
 
 class Database extends StatefulWidget {
+  String dataShow = "";
+  Database({required this.dataShow});
+
   @override
-  _MyAppState createState() => _MyAppState();
+  _MyAppState createState() => _MyAppState(dataShow: dataShow);
 }
 
 class _MyAppState extends State<Database> {
-  String selectedDate = "";
-  bool isSelected = false;
-  bool isShow = false;
-  /* return data be draw is gas or temp */
-  String? dataShow = "";
+  String selectedDate = "2024.05.08";
+  /* declare variable for function get one day */
+  String stringToShow = "History in 08.05.2024";
 
+  String dataShow = "";
+  _MyAppState({required this.dataShow});
   /*============== variable for select day or range of day===================
   * false: showing data of day
   * true: showing data in range of day 
@@ -28,15 +31,11 @@ class _MyAppState extends State<Database> {
   String startDay = "";
   String endDay = "";
 
-  void handleDataSelectedData(String? data) {
+/*   void handleDataSelectedData(String? data) {
     setState(() {
       dataShow = data;
-      isShow = true;
     });
-  }
-
-  /* declare variable for function get one day */
-  String stringToShow = "";
+  } */
 
   /* ====================================== func to click select one day ==================================== */
   void _showDatePicker() async {
@@ -50,8 +49,12 @@ class _MyAppState extends State<Database> {
       setState(() {
         DateTime strReceive = pickedDate;
         selectedDate = formattedDate(strReceive);
-        stringToShow = formattedToShow(strReceive);
-        isSelected = true;
+        String a = formattedToShow(strReceive);
+        if (dataShow == "Gas") {
+          stringToShow = "History of Gas in $a";
+        } else {
+          stringToShow = "History of Tempareture in $a";
+        }
         selectType = false;
       });
     }
@@ -117,7 +120,6 @@ class _MyAppState extends State<Database> {
         } else {
           setState(() {
             selectType = true; // which be day or range of day
-            isSelected = true; // accept to draw
 
             _startDate = pickedStartDate;
             _endDate = pickedEndDate;
@@ -132,7 +134,11 @@ class _MyAppState extends State<Database> {
 
             String a = formattedToShow(_startDate!);
             String b = formattedToShow(_endDate!);
-            stringToShow = '$a - $b';
+            if (dataShow == "Gas") {
+              stringToShow = 'History of Gas from $a to $b';
+            } else {
+              stringToShow = 'History of Temperature from $a to $b';
+            }
           });
         }
       }
@@ -178,35 +184,28 @@ class _MyAppState extends State<Database> {
                             ),
                           ),
                         ),
+                        PopupMenuButton(
+                          icon: const Icon(Icons.calendar_month),
+                          itemBuilder: (BuildContext context) => [
+                            const PopupMenuItem(
+                              child: Text('Select day'),
+                              value: 'Option 1',
+                            ),
+                            const PopupMenuItem(
+                              child: Text('Select range day'),
+                              value: 'Option 2',
+                            ),
+                          ],
+                          onSelected: (value) {
+                            if (value == 'Option 1') {
+                              _showDatePicker();
+                            } else if (value == 'Option 2') {
+                              _selectDateRange(context);
+                            }
+                          },
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    Row(children: [
-                      const SizedBox(width: 20),
-                      MyButton(onSelectOption: handleDataSelectedData),
-                      const SizedBox(width: 150),
-                      /*  DatePickerWidget(onDateSelected: handleDataSelectedDay), */
-                      PopupMenuButton(
-                        icon: const Icon(Icons.calendar_month),
-                        itemBuilder: (BuildContext context) => [
-                          const PopupMenuItem(
-                            child: Text('Select day'),
-                            value: 'Option 1',
-                          ),
-                          const PopupMenuItem(
-                            child: Text('Select range day'),
-                            value: 'Option 2',
-                          ),
-                        ],
-                        onSelected: (value) {
-                          if (value == 'Option 1') {
-                            _showDatePicker();
-                          } else if (value == 'Option 2') {
-                            _selectDateRange(context);
-                          }
-                        },
-                      ),
-                    ]),
                     Align(
                       alignment: Alignment.center,
                       child: Text(
@@ -221,53 +220,12 @@ class _MyAppState extends State<Database> {
                             child: LineChartWidget(
                               isDayOrMonth: selectType,
                               days: selectedDate,
-                              acceptToDraw: isSelected & isShow,
                               dataBeShown: dataShow,
                               startDay: startDay,
                               endDay: endDay,
                             ))),
                   ],
                 ))));
-  }
-}
-
-/* Widget for select data which be shown */
-class MyButton extends StatefulWidget {
-  final void Function(String?) onSelectOption;
-  const MyButton({required this.onSelectOption});
-
-  @override
-  _MyButtonState createState() => _MyButtonState();
-}
-
-class _MyButtonState extends State<MyButton> {
-  String? _selectedOption;
-  List<String>? _options = ['Gas', 'Temp'];
-
-  @override
-  Widget build(BuildContext context) {
-    if (_options == null || _options!.isEmpty) {
-      return const Center(
-        child: Text('No options available'),
-      );
-    }
-
-    return DropdownButton<String>(
-      value: _selectedOption,
-      hint: const Text('Select data'),
-      onChanged: (String? newValue) {
-        setState(() {
-          _selectedOption = newValue;
-        });
-        widget.onSelectOption(_selectedOption);
-      },
-      items: _options!.map((String value) {
-        return DropdownMenuItem<String>(
-          value: value,
-          child: Text(value),
-        );
-      }).toList(),
-    );
   }
 }
 
@@ -284,13 +242,11 @@ class LineChartWidget extends StatelessWidget {
 
   String days = "";
   String? dataBeShown = "";
-  bool acceptToDraw = true;
 
   bool isDayOrMonth = false;
   LineChartWidget(
       {required this.isDayOrMonth,
       required this.days,
-      required this.acceptToDraw,
       required this.dataBeShown,
       required this.startDay,
       required this.endDay});
@@ -322,17 +278,6 @@ class LineChartWidget extends StatelessWidget {
     }
     return value;
   }
-
-  /* return value after read value 30 times in Fire Store */
-/*   Future<int> returnValueGasAverage(String date, int hour, int min) async {
-    int sum = 0;
-    for (int i = min; i < min + 30; i = i + 2) {
-      int valueFromFireStore = await readGasFromFireStore(date, hour, i);
-      sum = sum + valueFromFireStore;
-    }
-    print((sum ~/ 15).toInt());
-    return (sum ~/ 15).toInt();
-  } */
 
   Future<List<FlSpot>> generateGasSpots() async {
     List<FlSpot> spots = [];
@@ -452,14 +397,77 @@ class LineChartWidget extends StatelessWidget {
       for (int i = int.parse(startDay_); i <= returnDayOfMonth(startDay); i++) {
         String day = "$year.$startMonth_.${i ~/ 10}${i % 10}";
         print(day);
-        valueBeDraw = await readTempFromFireStoreInDay(day);
+        int a = await (readTempThresholdInDay(day));
+        valueBeDraw = a % 100;
         spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
         xValue = xValue + 1;
       }
       for (int i = 1; i <= int.parse(endDay_); i++) {
         String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
         print(day);
-        valueBeDraw = await readTempFromFireStoreInDay(day);
+        int a = await (readTempThresholdInDay(day));
+        valueBeDraw = a % 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+    } else {
+      // same month
+      for (int i = int.parse(startDay_); i <= int.parse(endDay_); i++) {
+        String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
+        int a = await readTempFromFireStoreInDay(day);
+        valueBeDraw = a % 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+    }
+
+    return spots;
+  }
+
+  /*  */
+  Future<int> readTempThresholdInDay(String date) async {
+    DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+        .collection('ROOM 1')
+        .doc('TEMP_inday')
+        .get();
+    int value = 0;
+
+    if (documentSnapshot.exists) {
+      value = documentSnapshot[date];
+    }
+    return value;
+  }
+
+/* =================================== Read data Temp in range of days ========================================== */
+  Future<List<FlSpot>> generateTempThresholdRangeDays(
+      String startDay, String endDay) async {
+    List<FlSpot> spots = [];
+    String year = startDay[0] + startDay[1] + startDay[2] + startDay[3];
+    String startDay_ = startDay[8] + startDay[9];
+    String endDay_ = endDay[8] + endDay[9];
+    String startMonth_ = startDay[5] + startDay[6];
+    String endMonth_ = endDay[5] + endDay[6];
+    int valueBeDraw = 40;
+    double xValue = 0;
+    /* count days between start and end range of day */
+    int monthOfStart = monthOfStr(startDay);
+    int monthOfEnd = monthOfStr(endDay);
+
+    /* get data */
+    if (monthOfEnd > monthOfStart) {
+      // difference month
+      for (int i = int.parse(startDay_); i <= returnDayOfMonth(startDay); i++) {
+        String day = "$year.$startMonth_.${i ~/ 10}${i % 10}";
+        int a = await (readTempThresholdInDay(day));
+        valueBeDraw = a ~/ 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+      for (int i = 1; i <= int.parse(endDay_); i++) {
+        String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
+        print(day);
+        int a = await (readTempThresholdInDay(day));
+        valueBeDraw = a ~/ 100;
         spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
         xValue = xValue + 1;
       }
@@ -468,7 +476,8 @@ class LineChartWidget extends StatelessWidget {
       for (int i = int.parse(startDay_); i <= int.parse(endDay_); i++) {
         String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
         print(day);
-        valueBeDraw = await readTempFromFireStoreInDay(day);
+        int a = await (readTempThresholdInDay(day));
+        valueBeDraw = a ~/ 100;
         spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
         xValue = xValue + 1;
       }
@@ -512,83 +521,112 @@ class LineChartWidget extends StatelessWidget {
       // select day
       if (dataBeShown == 'Gas') {
         return generateGasSpots();
-      } else if (dataBeShown == 'Temp') {
-        return generateTempSpots();
       } else {
-        return [];
+        return generateTempSpots();
       }
     } else {
       // select range of day
       if (dataBeShown == 'Gas') {
         return generateGasSpotsRangeDays();
-      } else if (dataBeShown == 'Temp') {
-        return generateTempSpotsRangeDays(startDay, endDay);
       } else {
-        return [];
+        return generateTempSpotsRangeDays(startDay, endDay);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    print(acceptToDraw);
-    if (acceptToDraw == true) {
-      return Stack(
-        children: [
-          FutureBuilder<List<FlSpot>>(
-            future: selectDataBeShown(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Container(
-                  padding: const EdgeInsets.all(10),
-                  width: 100,
-                  height: 100,
-                  child: const CircularProgressIndicator(),
-                );
-              } else if (snapshot.hasError) {
-                return Text('Error: ${snapshot.error}');
-              } else {
-                List<FlSpot> spots = snapshot.data!;
-                return Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    width: double.infinity,
-                    height: 500,
-                    child: LineChart(
-                      LineChartData(
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: spots,
-                            //isCurved: true,
-                            color: Colors.blue,
-                            barWidth: 2,
-                            isStrokeCapRound: true,
-                            belowBarData: BarAreaData(show: false),
-                            dotData: const FlDotData(
-                              show: false,
+    return Stack(
+      children: [
+        FutureBuilder<List<FlSpot>>(
+          future: selectDataBeShown(),
+          builder: (context, snapshotData) {
+            if (snapshotData.connectionState == ConnectionState.waiting) {
+              return Container(
+                padding: const EdgeInsets.all(10),
+                width: 100,
+                height: 100,
+                child: const CircularProgressIndicator(),
+              );
+            } else if (snapshotData.hasError) {
+              return Text('Error: ${snapshotData.error}');
+            } else {
+              List<FlSpot> dataSpots = snapshotData.data!;
+              return FutureBuilder<List<FlSpot>>(
+                future: generateTempThresholdRangeDays(startDay, endDay),
+                builder: (context, snapshotThreshold) {
+                  if (snapshotThreshold.connectionState ==
+                      ConnectionState.waiting) {
+                    return Container(
+                      padding: const EdgeInsets.all(10),
+                      width: 100,
+                      height: 100,
+                      child: const CircularProgressIndicator(),
+                    );
+                  } else if (snapshotThreshold.hasError) {
+                    return Text('Error: ${snapshotThreshold.error}');
+                  } else {
+                    List<FlSpot> thresholdSpots = snapshotThreshold.data!;
+                    return Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        width: double.infinity,
+                        height: 600,
+                        child: LineChart(
+                          LineChartData(
+                            lineBarsData: [
+                              LineChartBarData(
+                                spots: dataSpots,
+                                color: Colors.blue,
+                                barWidth: 4,
+                                isStrokeCapRound: true,
+                                isCurved: false,
+                                belowBarData: BarAreaData(show: false),
+                                dotData: const FlDotData(
+                                  show: false,
+                                ),
+                              ),
+                              LineChartBarData(
+                                spots: thresholdSpots,
+                                color: Colors.red,
+                                barWidth: 4,
+                                isStrokeCapRound: true,
+                                isCurved: false,
+                                belowBarData: BarAreaData(show: false),
+                                dotData: const FlDotData(
+                                  show: false,
+                                ),
+                              )
+                            ],
+                            titlesData: const FlTitlesData(
+                                bottomTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                  showTitles: true,
+                                )),
+                                rightTitles: AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false)),
+                                topTitles: AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false))),
+                            borderData: FlBorderData(
+                              show: true,
+                              border: Border.all(color: Colors.black, width: 1),
                             ),
-                          )
-                        ],
-                        borderData: FlBorderData(
-                          show: true,
-                          border: Border.all(color: Colors.black, width: 1),
+                            minX: 0,
+                            maxX: 25 - 1,
+                            minY: 0,
+                            maxY: 100,
+                          ),
                         ),
-                        minX: 0,
-                        maxX: 25 - 1,
-                        minY: 0,
-                        maxY: 100,
                       ),
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-      );
-    } else {
-      return const SizedBox();
-    }
+                    );
+                  }
+                },
+              );
+            }
+          },
+        ),
+      ],
+    );
   }
 }
