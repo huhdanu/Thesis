@@ -286,19 +286,13 @@ class LineChartWidget extends StatelessWidget {
     List<FlSpot> spots = [];
 
     double hour = 0;
-    double min = 0;
     int valueBeDraw = 40;
 
-    for (int i = 0; i < 48; i++) {
-      int getValue =
-          await readGasFromFireStore(days, hour.toInt(), min.toInt());
+    for (int i = 0; i < 24; i++) {
+      int getValue = await readGasFromFireStore(days, hour.toInt(), 0);
       valueBeDraw = getValue % 100;
-      spots.add(FlSpot(hour + min / 60, valueBeDraw.toDouble()));
-      min += 30;
-      if (min >= 60) {
-        hour++;
-        min = 0;
-      }
+      spots.add(FlSpot(hour, valueBeDraw.toDouble()));
+      hour++;
     }
     return spots;
   }
@@ -308,19 +302,14 @@ class LineChartWidget extends StatelessWidget {
     List<FlSpot> spots = [];
 
     double hour = 0;
-    double min = 0;
     int valueBeDraw = 40;
 
-    for (int i = 0; i < 48; i++) {
-      int getValue =
-          await readTempFromFireStore(days, hour.toInt(), min.toInt());
+    for (int i = 0; i < 24; i++) {
+      print("value of hour: $hour");
+      int getValue = await readTempFromFireStore(days, hour.toInt(), 0);
       valueBeDraw = getValue % 100;
-      spots.add(FlSpot(hour + min / 60, valueBeDraw.toDouble()));
-      min += 30;
-      if (min >= 60) {
-        hour++;
-        min = 0;
-      }
+      spots.add(FlSpot(hour, valueBeDraw.toDouble()));
+      hour++;
     }
     return spots;
   }
@@ -330,21 +319,15 @@ class LineChartWidget extends StatelessWidget {
     List<FlSpot> spots = [];
 
     double hour = 0;
-    double min = 0;
     int valueBeDraw = 40;
 
     for (int i = 0; i < 48; i++) {
-      int getValue =
-          await readGasFromFireStore(days, hour.toInt(), min.toInt());
+      print("value of hour in threshold: $hour");
+      int getValue = await readGasFromFireStore(days, hour.toInt(), 0);
       valueBeDraw = getValue ~/ 100;
-      spots.add(FlSpot(hour + min / 60, valueBeDraw.toDouble()));
-      min += 30;
-      if (min >= 60) {
-        hour++;
-        min = 0;
-      }
+      spots.add(FlSpot(hour, valueBeDraw.toDouble()));
+      hour++;
     }
-
     return spots;
   }
 
@@ -353,19 +336,14 @@ class LineChartWidget extends StatelessWidget {
     List<FlSpot> spots = [];
 
     double hour = 0;
-    double min = 0;
     int valueBeDraw = 40;
 
-    for (int i = 0; i < 48; i++) {
-      int getValue =
-          await readTempFromFireStore(days, hour.toInt(), min.toInt());
+    for (int i = 0; i < 24; i++) {
+      print("value of hour in threshold: $hour");
+      int getValue = await readTempFromFireStore(days, hour.toInt(), 0);
       valueBeDraw = getValue ~/ 100;
-      spots.add(FlSpot(hour + min / 60, valueBeDraw.toDouble()));
-      min += 30;
-      if (min >= 60) {
-        hour++;
-        min = 0;
-      }
+      spots.add(FlSpot(hour, valueBeDraw.toDouble()));
+      hour++;
     }
     return spots;
   }
@@ -648,6 +626,25 @@ class LineChartWidget extends StatelessWidget {
     }
   }
 
+  int returnValueX() {
+    if (isDayOrMonth) {
+      String startDay_ = startDay[8] + startDay[9];
+      String endDay_ = endDay[8] + endDay[9];
+      String startMonth_ = startDay[5] + startDay[6];
+      String endMonth_ = endDay[5] + endDay[6];
+      int days = (int.parse(startMonth_) < int.parse(endMonth_))
+          ? (returnDayOfMonth(startDay) -
+              int.parse(startDay_) +
+              1 +
+              int.parse(endDay_))
+          : (int.parse(endDay_) - int.parse(startDay_) + 1);
+      print(days);
+      return days;
+    } else {
+      return 24;
+    }
+  }
+
   /* ====================================== ************************************* ==================================== */
   @override
   Widget build(BuildContext context) {
@@ -698,7 +695,7 @@ class LineChartWidget extends StatelessWidget {
                                     color: Colors.blue,
                                     barWidth: 4,
                                     isStrokeCapRound: true,
-                                    isCurved: false,
+                                    isCurved: true,
                                     belowBarData: BarAreaData(show: false),
                                     dotData: const FlDotData(
                                       show: false,
@@ -709,7 +706,7 @@ class LineChartWidget extends StatelessWidget {
                                     color: Colors.red,
                                     barWidth: 4,
                                     isStrokeCapRound: true,
-                                    isCurved: false,
+                                    isCurved: true,
                                     belowBarData: BarAreaData(show: false),
                                     dotData: const FlDotData(
                                       show: false,
@@ -733,7 +730,7 @@ class LineChartWidget extends StatelessWidget {
                                       Border.all(color: Colors.black, width: 1),
                                 ),
                                 minX: 0,
-                                maxX: 25 - 1,
+                                maxX: returnValueX() - 1,
                                 minY: 0,
                                 maxY: 100,
                               ),
