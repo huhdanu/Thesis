@@ -251,6 +251,7 @@ class LineChartWidget extends StatelessWidget {
       required this.startDay,
       required this.endDay});
 
+  /* =================================== Read data Gas in day ========================================== */
   Future<int> readGasFromFireStore(String date, int hour, int min) async {
     DocumentSnapshot documentSnapshot =
         await FirebaseFirestore.instance.collection('ROOM 1').doc('GAS').get();
@@ -265,6 +266,7 @@ class LineChartWidget extends StatelessWidget {
     return value;
   }
 
+  /* =================================== Read data Temp in day ========================================== */
   Future<int> readTempFromFireStore(String date, int hour, int min) async {
     DocumentSnapshot documentSnapshot =
         await FirebaseFirestore.instance.collection('ROOM 1').doc('TEMP').get();
@@ -279,6 +281,7 @@ class LineChartWidget extends StatelessWidget {
     return value;
   }
 
+  /* =================================== Read data Temp in day ========================================== */
   Future<List<FlSpot>> generateGasSpots() async {
     List<FlSpot> spots = [];
 
@@ -289,24 +292,18 @@ class LineChartWidget extends StatelessWidget {
     for (int i = 0; i < 48; i++) {
       int getValue =
           await readGasFromFireStore(days, hour.toInt(), min.toInt());
-      if (getValue > 100) {
-        valueBeDraw = getValue % 100;
-      } else {
-        valueBeDraw = getValue;
-      }
-      double a = valueBeDraw.toDouble();
-      double xValue = hour + min / 60;
-      spots.add(FlSpot(xValue, a));
+      valueBeDraw = getValue % 100;
+      spots.add(FlSpot(hour + min / 60, valueBeDraw.toDouble()));
       min += 30;
       if (min >= 60) {
         hour++;
         min = 0;
       }
     }
-
     return spots;
   }
 
+  /* =================================== Read data Temp in day ========================================== */
   Future<List<FlSpot>> generateTempSpots() async {
     List<FlSpot> spots = [];
 
@@ -315,20 +312,32 @@ class LineChartWidget extends StatelessWidget {
     int valueBeDraw = 40;
 
     for (int i = 0; i < 48; i++) {
-      if (hour < 5) {
-        int getValue =
-            await readTempFromFireStore(days, hour.toInt(), min.toInt());
-        if (getValue > 100) {
-          valueBeDraw = getValue ~/ 100;
-        }
-      } else if (hour < 14) {
-        valueBeDraw = 20;
-      } else {
-        valueBeDraw = 67;
+      int getValue =
+          await readTempFromFireStore(days, hour.toInt(), min.toInt());
+      valueBeDraw = getValue % 100;
+      spots.add(FlSpot(hour + min / 60, valueBeDraw.toDouble()));
+      min += 30;
+      if (min >= 60) {
+        hour++;
+        min = 0;
       }
-      double a = valueBeDraw.toDouble();
-      double xValue = hour + min / 60;
-      spots.add(FlSpot(xValue, a));
+    }
+    return spots;
+  }
+
+  /* =================================== Read data Gas Threshold in day ========================================== */
+  Future<List<FlSpot>> generateGasThreshold() async {
+    List<FlSpot> spots = [];
+
+    double hour = 0;
+    double min = 0;
+    int valueBeDraw = 40;
+
+    for (int i = 0; i < 48; i++) {
+      int getValue =
+          await readGasFromFireStore(days, hour.toInt(), min.toInt());
+      valueBeDraw = getValue ~/ 100;
+      spots.add(FlSpot(hour + min / 60, valueBeDraw.toDouble()));
       min += 30;
       if (min >= 60) {
         hour++;
@@ -339,7 +348,29 @@ class LineChartWidget extends StatelessWidget {
     return spots;
   }
 
-  /* func to return value of day */
+  /* =================================== Read data Temp Threshold in day ========================================== */
+  Future<List<FlSpot>> generateTempThreshold() async {
+    List<FlSpot> spots = [];
+
+    double hour = 0;
+    double min = 0;
+    int valueBeDraw = 40;
+
+    for (int i = 0; i < 48; i++) {
+      int getValue =
+          await readTempFromFireStore(days, hour.toInt(), min.toInt());
+      valueBeDraw = getValue ~/ 100;
+      spots.add(FlSpot(hour + min / 60, valueBeDraw.toDouble()));
+      min += 30;
+      if (min >= 60) {
+        hour++;
+        min = 0;
+      }
+    }
+    return spots;
+  }
+
+  /* ========================================= func to return value of day ===================================== */
   int returnDayOfMonth(String str) {
     int month = int.parse(str[5]) * 10 + int.parse(str[6]);
     if (month == 2) {
@@ -362,7 +393,7 @@ class LineChartWidget extends StatelessWidget {
     return int.parse(str[5]) * 10 + int.parse(str[6]);
   }
 
-  /* =================================== Read data Temp in day ========================================== */
+  /* ======================================== Read data Temp in day ============================================ */
   Future<int> readTempFromFireStoreInDay(String date) async {
     DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
         .collection('ROOM 1')
@@ -374,6 +405,67 @@ class LineChartWidget extends StatelessWidget {
       value = documentSnapshot[date];
     }
     return value;
+  }
+
+  /* =================================== Read data Gas in day ========================================== */
+  Future<int> readGasFromFireStoreInDay(String date) async {
+    DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+        .collection('ROOM 1')
+        .doc('GAS_inday')
+        .get();
+    int value = 0;
+
+    if (documentSnapshot.exists) {
+      value = documentSnapshot[date];
+    }
+    return value;
+  }
+
+  /* =================================== Read data Gas in range of days ========================================== */
+  Future<List<FlSpot>> generateGasSpotsRangeDays(
+      String startDay, String endDay) async {
+    List<FlSpot> spots = [];
+    String year = startDay[0] + startDay[1] + startDay[2] + startDay[3];
+    String startDay_ = startDay[8] + startDay[9];
+    String endDay_ = endDay[8] + endDay[9];
+    String startMonth_ = startDay[5] + startDay[6];
+    String endMonth_ = endDay[5] + endDay[6];
+    int valueBeDraw = 40;
+    double xValue = 0;
+    /* count days between start and end range of day */
+    int monthOfStart = monthOfStr(startDay);
+    int monthOfEnd = monthOfStr(endDay);
+
+    /* get data */
+    if (monthOfEnd > monthOfStart) {
+      // difference month
+      for (int i = int.parse(startDay_); i <= returnDayOfMonth(startDay); i++) {
+        String day = "$year.$startMonth_.${i ~/ 10}${i % 10}";
+        print(day);
+        int a = await (readGasFromFireStoreInDay(day));
+        valueBeDraw = a % 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+      for (int i = 1; i <= int.parse(endDay_); i++) {
+        String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
+        print(day);
+        int a = await (readGasFromFireStoreInDay(day));
+        valueBeDraw = a % 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+    } else {
+      // same month
+      for (int i = int.parse(startDay_); i <= int.parse(endDay_); i++) {
+        String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
+        int a = await readGasFromFireStoreInDay(day);
+        valueBeDraw = a % 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+    }
+    return spots;
   }
 
 /* =================================== Read data Temp in range of days ========================================== */
@@ -397,7 +489,7 @@ class LineChartWidget extends StatelessWidget {
       for (int i = int.parse(startDay_); i <= returnDayOfMonth(startDay); i++) {
         String day = "$year.$startMonth_.${i ~/ 10}${i % 10}";
         print(day);
-        int a = await (readTempThresholdInDay(day));
+        int a = await (readTempFromFireStoreInDay(day));
         valueBeDraw = a % 100;
         spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
         xValue = xValue + 1;
@@ -405,7 +497,7 @@ class LineChartWidget extends StatelessWidget {
       for (int i = 1; i <= int.parse(endDay_); i++) {
         String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
         print(day);
-        int a = await (readTempThresholdInDay(day));
+        int a = await (readTempFromFireStoreInDay(day));
         valueBeDraw = a % 100;
         spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
         xValue = xValue + 1;
@@ -424,21 +516,54 @@ class LineChartWidget extends StatelessWidget {
     return spots;
   }
 
-  /*  */
-  Future<int> readTempThresholdInDay(String date) async {
-    DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
-        .collection('ROOM 1')
-        .doc('TEMP_inday')
-        .get();
-    int value = 0;
+  /* =================================== Read data Gas threshold in range of days ========================================== */
+  Future<List<FlSpot>> generateGasThresholdRangeDays(
+      String startDay, String endDay) async {
+    List<FlSpot> spots = [];
+    String year = startDay[0] + startDay[1] + startDay[2] + startDay[3];
+    String startDay_ = startDay[8] + startDay[9];
+    String endDay_ = endDay[8] + endDay[9];
+    String startMonth_ = startDay[5] + startDay[6];
+    String endMonth_ = endDay[5] + endDay[6];
+    int valueBeDraw = 40;
+    double xValue = 0;
+    /* count days between start and end range of day */
+    int monthOfStart = monthOfStr(startDay);
+    int monthOfEnd = monthOfStr(endDay);
 
-    if (documentSnapshot.exists) {
-      value = documentSnapshot[date];
+    /* get data */
+    if (monthOfEnd > monthOfStart) {
+      // difference month
+      for (int i = int.parse(startDay_); i <= returnDayOfMonth(startDay); i++) {
+        String day = "$year.$startMonth_.${i ~/ 10}${i % 10}";
+        int a = await (readGasFromFireStoreInDay(day));
+        valueBeDraw = a ~/ 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+      for (int i = 1; i <= int.parse(endDay_); i++) {
+        String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
+        print(day);
+        int a = await (readGasFromFireStoreInDay(day));
+        valueBeDraw = a ~/ 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+    } else {
+      // same month
+      for (int i = int.parse(startDay_); i <= int.parse(endDay_); i++) {
+        String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
+        print(day);
+        int a = await (readGasFromFireStoreInDay(day));
+        valueBeDraw = a ~/ 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
     }
-    return value;
+    return spots;
   }
 
-/* =================================== Read data Temp in range of days ========================================== */
+  /* =================================== Read data Temp in range of days ========================================== */
   Future<List<FlSpot>> generateTempThresholdRangeDays(
       String startDay, String endDay) async {
     List<FlSpot> spots = [];
@@ -458,7 +583,7 @@ class LineChartWidget extends StatelessWidget {
       // difference month
       for (int i = int.parse(startDay_); i <= returnDayOfMonth(startDay); i++) {
         String day = "$year.$startMonth_.${i ~/ 10}${i % 10}";
-        int a = await (readTempThresholdInDay(day));
+        int a = await (readTempFromFireStoreInDay(day));
         valueBeDraw = a ~/ 100;
         spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
         xValue = xValue + 1;
@@ -466,7 +591,7 @@ class LineChartWidget extends StatelessWidget {
       for (int i = 1; i <= int.parse(endDay_); i++) {
         String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
         print(day);
-        int a = await (readTempThresholdInDay(day));
+        int a = await (readTempFromFireStoreInDay(day));
         valueBeDraw = a ~/ 100;
         spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
         xValue = xValue + 1;
@@ -476,42 +601,12 @@ class LineChartWidget extends StatelessWidget {
       for (int i = int.parse(startDay_); i <= int.parse(endDay_); i++) {
         String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
         print(day);
-        int a = await (readTempThresholdInDay(day));
+        int a = await (readTempFromFireStoreInDay(day));
         valueBeDraw = a ~/ 100;
         spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
         xValue = xValue + 1;
       }
     }
-
-    return spots;
-  }
-
-/* ====================================== func to click select one day ==================================== */
-  Future<List<FlSpot>> generateGasSpotsRangeDays() async {
-    List<FlSpot> spots = [];
-
-    double hour = 0;
-    double min = 0;
-    int valueBeDraw = 40;
-
-    for (int i = 0; i < 48; i++) {
-      int getValue =
-          await readGasFromFireStore(days, hour.toInt(), min.toInt());
-      if (getValue > 100) {
-        valueBeDraw = getValue % 100;
-      } else {
-        valueBeDraw = getValue;
-      }
-      double a = valueBeDraw.toDouble();
-      double xValue = hour + min / 60;
-      spots.add(FlSpot(xValue, a));
-      min += 30;
-      if (min >= 60) {
-        hour++;
-        min = 0;
-      }
-    }
-
     return spots;
   }
 
@@ -527,13 +622,33 @@ class LineChartWidget extends StatelessWidget {
     } else {
       // select range of day
       if (dataBeShown == 'Gas') {
-        return generateGasSpotsRangeDays();
+        return generateGasSpotsRangeDays(startDay, endDay);
       } else {
         return generateTempSpotsRangeDays(startDay, endDay);
       }
     }
   }
 
+  /* ====================================== func to click to draw data threshold ==================================== */
+  Future<List<FlSpot>> selectDataThreshold() async {
+    if (isDayOrMonth == false) {
+      // select day
+      if (dataBeShown == 'Gas') {
+        return generateGasThreshold();
+      } else {
+        return generateTempThreshold();
+      }
+    } else {
+      // select range of day
+      if (dataBeShown == 'Gas') {
+        return generateGasThresholdRangeDays(startDay, endDay);
+      } else {
+        return generateTempThresholdRangeDays(startDay, endDay);
+      }
+    }
+  }
+
+  /* ====================================== ************************************* ==================================== */
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -553,7 +668,7 @@ class LineChartWidget extends StatelessWidget {
             } else {
               List<FlSpot> dataSpots = snapshotData.data!;
               return FutureBuilder<List<FlSpot>>(
-                future: generateTempThresholdRangeDays(startDay, endDay),
+                future: selectDataThreshold(),
                 builder: (context, snapshotThreshold) {
                   if (snapshotThreshold.connectionState ==
                       ConnectionState.waiting) {
@@ -567,58 +682,121 @@ class LineChartWidget extends StatelessWidget {
                     return Text('Error: ${snapshotThreshold.error}');
                   } else {
                     List<FlSpot> thresholdSpots = snapshotThreshold.data!;
-                    return Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        width: double.infinity,
-                        height: 600,
-                        child: LineChart(
-                          LineChartData(
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: dataSpots,
-                                color: Colors.blue,
-                                barWidth: 4,
-                                isStrokeCapRound: true,
-                                isCurved: false,
-                                belowBarData: BarAreaData(show: false),
-                                dotData: const FlDotData(
-                                  show: false,
+                    return Stack(
+                      children: [
+                        Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            width: double.infinity,
+                            height: 600,
+                            child: LineChart(
+                              LineChartData(
+                                lineBarsData: [
+                                  LineChartBarData(
+                                    spots: dataSpots,
+                                    color: Colors.blue,
+                                    barWidth: 4,
+                                    isStrokeCapRound: true,
+                                    isCurved: false,
+                                    belowBarData: BarAreaData(show: false),
+                                    dotData: const FlDotData(
+                                      show: false,
+                                    ),
+                                  ),
+                                  LineChartBarData(
+                                    spots: thresholdSpots,
+                                    color: Colors.red,
+                                    barWidth: 4,
+                                    isStrokeCapRound: true,
+                                    isCurved: false,
+                                    belowBarData: BarAreaData(show: false),
+                                    dotData: const FlDotData(
+                                      show: false,
+                                    ),
+                                  )
+                                ],
+                                titlesData: const FlTitlesData(
+                                    bottomTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                      showTitles: true,
+                                    )),
+                                    rightTitles: AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: false)),
+                                    topTitles: AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: false))),
+                                borderData: FlBorderData(
+                                  show: true,
+                                  border:
+                                      Border.all(color: Colors.black, width: 1),
                                 ),
+                                minX: 0,
+                                maxX: 25 - 1,
+                                minY: 0,
+                                maxY: 100,
                               ),
-                              LineChartBarData(
-                                spots: thresholdSpots,
-                                color: Colors.red,
-                                barWidth: 4,
-                                isStrokeCapRound: true,
-                                isCurved: false,
-                                belowBarData: BarAreaData(show: false),
-                                dotData: const FlDotData(
-                                  show: false,
-                                ),
-                              )
-                            ],
-                            titlesData: const FlTitlesData(
-                                bottomTitles: AxisTitles(
-                                    sideTitles: SideTitles(
-                                  showTitles: true,
-                                )),
-                                rightTitles: AxisTitles(
-                                    sideTitles: SideTitles(showTitles: false)),
-                                topTitles: AxisTitles(
-                                    sideTitles: SideTitles(showTitles: false))),
-                            borderData: FlBorderData(
-                              show: true,
-                              border: Border.all(color: Colors.black, width: 1),
                             ),
-                            minX: 0,
-                            maxX: 25 - 1,
-                            minY: 0,
-                            maxY: 100,
                           ),
                         ),
-                      ),
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.5),
+                                  spreadRadius: 1,
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 20,
+                                      height: 8,
+                                      color: Colors.blue,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    const Text(
+                                      'Value',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 20,
+                                      height: 8,
+                                      color: Colors.red,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    const Text(
+                                      'Threshold',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     );
                   }
                 },
