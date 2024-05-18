@@ -15,9 +15,20 @@ class Database extends StatefulWidget {
 }
 
 class _MyAppState extends State<Database> {
-  String selectedDate = "2024.05.08";
+  String selectedDate = "";
+  String stringToShow = "";
+
+  @override
+  void initState() {
+    super.initState();
+    DateTime now = DateTime.now();
+    DateTime adjustedDateTime = now.subtract(Duration(days: 1));
+    selectedDate = formattedDate(adjustedDateTime);
+    String temp = formattedToShow(adjustedDateTime);
+    stringToShow = "History in $temp";
+  }
+
   /* declare variable for function get one day */
-  String stringToShow = "History in 08.05.2024";
 
   String dataShow = "";
   _MyAppState({required this.dataShow});
@@ -30,12 +41,6 @@ class _MyAppState extends State<Database> {
   /* variable for range of day */
   String startDay = "";
   String endDay = "";
-
-/*   void handleDataSelectedData(String? data) {
-    setState(() {
-      dataShow = data;
-    });
-  } */
 
   /* ====================================== func to click select one day ==================================== */
   void _showDatePicker() async {
@@ -253,14 +258,15 @@ class LineChartWidget extends StatelessWidget {
 
   /* =================================== Read data Gas in day ========================================== */
   Future<int> readGasFromFireStore(String date, int hour, int min) async {
-    DocumentSnapshot documentSnapshot =
-        await FirebaseFirestore.instance.collection('ROOM 1').doc('GAS').get();
+    DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+        .collection('ROOM 1')
+        .doc('GAS_inhour')
+        .get();
     int value = 0;
     late String fieldName;
 
     if (documentSnapshot.exists) {
-      fieldName =
-          "$date-${hour.toString().padLeft(2, '0')}:${min.toString().padLeft(2, '0')}";
+      fieldName = "$date-${hour.toString().padLeft(2, '0')}";
       value = documentSnapshot[fieldName];
     }
     return value;
@@ -268,14 +274,15 @@ class LineChartWidget extends StatelessWidget {
 
   /* =================================== Read data Temp in day ========================================== */
   Future<int> readTempFromFireStore(String date, int hour, int min) async {
-    DocumentSnapshot documentSnapshot =
-        await FirebaseFirestore.instance.collection('ROOM 1').doc('TEMP').get();
+    DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+        .collection('ROOM 1')
+        .doc('TEMP_inhour')
+        .get();
     int value = 0;
     late String fieldName;
 
     if (documentSnapshot.exists) {
-      fieldName =
-          "$date-${hour.toString().padLeft(2, '0')}:${min.toString().padLeft(2, '0')}";
+      fieldName = "$date-${hour.toString().padLeft(2, '0')}";
       value = documentSnapshot[fieldName];
     }
     return value;
@@ -290,6 +297,7 @@ class LineChartWidget extends StatelessWidget {
 
     for (int i = 0; i < 24; i++) {
       int getValue = await readGasFromFireStore(days, hour.toInt(), 0);
+      print(getValue);
       valueBeDraw = getValue % 100;
       spots.add(FlSpot(hour, valueBeDraw.toDouble()));
       hour++;
@@ -307,6 +315,7 @@ class LineChartWidget extends StatelessWidget {
     for (int i = 0; i < 24; i++) {
       print("value of hour: $hour");
       int getValue = await readTempFromFireStore(days, hour.toInt(), 0);
+      print(getValue);
       valueBeDraw = getValue % 100;
       spots.add(FlSpot(hour, valueBeDraw.toDouble()));
       hour++;
@@ -321,7 +330,7 @@ class LineChartWidget extends StatelessWidget {
     double hour = 0;
     int valueBeDraw = 40;
 
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < 24; i++) {
       print("value of hour in threshold: $hour");
       int getValue = await readGasFromFireStore(days, hour.toInt(), 0);
       valueBeDraw = getValue ~/ 100;
@@ -695,7 +704,7 @@ class LineChartWidget extends StatelessWidget {
                                     color: Colors.blue,
                                     barWidth: 4,
                                     isStrokeCapRound: true,
-                                    isCurved: true,
+                                    isCurved: false,
                                     belowBarData: BarAreaData(show: false),
                                     dotData: const FlDotData(
                                       show: false,
@@ -706,7 +715,7 @@ class LineChartWidget extends StatelessWidget {
                                     color: Colors.red,
                                     barWidth: 4,
                                     isStrokeCapRound: true,
-                                    isCurved: true,
+                                    isCurved: false,
                                     belowBarData: BarAreaData(show: false),
                                     dotData: const FlDotData(
                                       show: false,

@@ -187,22 +187,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                       )),
                                     ],
                                   ),
-                                  /* Expanded(
-                              flex: 1,
-                              child: Container(
-                                color: Colors.black,
-                                width: MediaQuery.of(context).size.width,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
-                                  children: <Widget>[
-                                    IconButton(
-                                        icon: Icon(Icons.photo_camera, size: 24))
-                                  ],
-                                ),
-                              ),
-                            ) */
                                 ],
                               );
                             }
