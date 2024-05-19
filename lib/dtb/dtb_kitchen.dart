@@ -7,17 +7,31 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async'; /* for count time */
 
 class Database extends StatefulWidget {
+  String dataShow = "";
+  Database({required this.dataShow});
+
   @override
-  _MyAppState createState() => _MyAppState();
+  _MyAppState createState() => _MyAppState(dataShow: dataShow);
 }
 
 class _MyAppState extends State<Database> {
   String selectedDate = "";
-  bool isSelected = false;
-  bool isShow = false;
-  /* return data be draw is gas or temp */
-  String? dataShow = "";
+  String stringToShow = "";
 
+  @override
+  void initState() {
+    super.initState();
+    DateTime now = DateTime.now();
+    DateTime adjustedDateTime = now.subtract(Duration(days: 1));
+    selectedDate = formattedDate(adjustedDateTime);
+    String temp = formattedToShow(adjustedDateTime);
+    stringToShow = "History in $temp";
+  }
+
+  /* declare variable for function get one day */
+
+  String dataShow = "";
+  _MyAppState({required this.dataShow});
   /*============== variable for select day or range of day===================
   * false: showing data of day
   * true: showing data in range of day 
@@ -27,16 +41,6 @@ class _MyAppState extends State<Database> {
   /* variable for range of day */
   String startDay = "";
   String endDay = "";
-
-  void handleDataSelectedData(String? data) {
-    setState(() {
-      dataShow = data;
-      isShow = true;
-    });
-  }
-
-  /* declare variable for function get one day */
-  String stringToShow = "";
 
   /* ====================================== func to click select one day ==================================== */
   void _showDatePicker() async {
@@ -50,8 +54,12 @@ class _MyAppState extends State<Database> {
       setState(() {
         DateTime strReceive = pickedDate;
         selectedDate = formattedDate(strReceive);
-        stringToShow = formattedToShow(strReceive);
-        isSelected = true;
+        String a = formattedToShow(strReceive);
+        if (dataShow == "Gas") {
+          stringToShow = "History of Gas in $a";
+        } else {
+          stringToShow = "History of Tempareture in $a";
+        }
         selectType = false;
       });
     }
@@ -117,7 +125,6 @@ class _MyAppState extends State<Database> {
         } else {
           setState(() {
             selectType = true; // which be day or range of day
-            isSelected = true; // accept to draw
 
             _startDate = pickedStartDate;
             _endDate = pickedEndDate;
@@ -132,7 +139,11 @@ class _MyAppState extends State<Database> {
 
             String a = formattedToShow(_startDate!);
             String b = formattedToShow(_endDate!);
-            stringToShow = '$a - $b';
+            if (dataShow == "Gas") {
+              stringToShow = 'History of Gas from $a to $b';
+            } else {
+              stringToShow = 'History of Temperature from $a to $b';
+            }
           });
         }
       }
@@ -178,35 +189,28 @@ class _MyAppState extends State<Database> {
                             ),
                           ),
                         ),
+                        PopupMenuButton(
+                          icon: const Icon(Icons.calendar_month),
+                          itemBuilder: (BuildContext context) => [
+                            const PopupMenuItem(
+                              child: Text('Select day'),
+                              value: 'Option 1',
+                            ),
+                            const PopupMenuItem(
+                              child: Text('Select range day'),
+                              value: 'Option 2',
+                            ),
+                          ],
+                          onSelected: (value) {
+                            if (value == 'Option 1') {
+                              _showDatePicker();
+                            } else if (value == 'Option 2') {
+                              _selectDateRange(context);
+                            }
+                          },
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    Row(children: [
-                      const SizedBox(width: 20),
-                      MyButton(onSelectOption: handleDataSelectedData),
-                      const SizedBox(width: 150),
-                      /*  DatePickerWidget(onDateSelected: handleDataSelectedDay), */
-                      PopupMenuButton(
-                        icon: const Icon(Icons.calendar_month),
-                        itemBuilder: (BuildContext context) => [
-                          const PopupMenuItem(
-                            child: Text('Select day'),
-                            value: 'Option 1',
-                          ),
-                          const PopupMenuItem(
-                            child: Text('Select range day'),
-                            value: 'Option 2',
-                          ),
-                        ],
-                        onSelected: (value) {
-                          if (value == 'Option 1') {
-                            _showDatePicker();
-                          } else if (value == 'Option 2') {
-                            _selectDateRange(context);
-                          }
-                        },
-                      ),
-                    ]),
                     Align(
                       alignment: Alignment.center,
                       child: Text(
@@ -217,57 +221,16 @@ class _MyAppState extends State<Database> {
                     ),
                     Expanded(
                         child: Align(
-                            alignment: Alignment.center,
+                            alignment: Alignment.topCenter,
                             child: LineChartWidget(
                               isDayOrMonth: selectType,
                               days: selectedDate,
-                              acceptToDraw: isSelected & isShow,
                               dataBeShown: dataShow,
                               startDay: startDay,
                               endDay: endDay,
                             ))),
                   ],
                 ))));
-  }
-}
-
-/* Widget for select data which be shown */
-class MyButton extends StatefulWidget {
-  final void Function(String?) onSelectOption;
-  const MyButton({required this.onSelectOption});
-
-  @override
-  _MyButtonState createState() => _MyButtonState();
-}
-
-class _MyButtonState extends State<MyButton> {
-  String? _selectedOption;
-  List<String>? _options = ['Gas', 'Temp'];
-
-  @override
-  Widget build(BuildContext context) {
-    if (_options == null || _options!.isEmpty) {
-      return const Center(
-        child: Text('No options available'),
-      );
-    }
-
-    return DropdownButton<String>(
-      value: _selectedOption,
-      hint: const Text('Select data'),
-      onChanged: (String? newValue) {
-        setState(() {
-          _selectedOption = newValue;
-        });
-        widget.onSelectOption(_selectedOption);
-      },
-      items: _options!.map((String value) {
-        return DropdownMenuItem<String>(
-          value: value,
-          child: Text(value),
-        );
-      }).toList(),
-    );
   }
 }
 
@@ -284,117 +247,117 @@ class LineChartWidget extends StatelessWidget {
 
   String days = "";
   String? dataBeShown = "";
-  bool acceptToDraw = true;
 
   bool isDayOrMonth = false;
   LineChartWidget(
       {required this.isDayOrMonth,
       required this.days,
-      required this.acceptToDraw,
       required this.dataBeShown,
       required this.startDay,
       required this.endDay});
 
+  /* =================================== Read data Gas in day ========================================== */
   Future<int> readGasFromFireStore(String date, int hour, int min) async {
-    DocumentSnapshot documentSnapshot =
-        await FirebaseFirestore.instance.collection('ROOM 2').doc('GAS').get();
+    DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+        .collection('ROOM 2')
+        .doc('GAS_inhour')
+        .get();
     int value = 0;
     late String fieldName;
 
     if (documentSnapshot.exists) {
-      fieldName =
-          "$date-${hour.toString().padLeft(2, '0')}:${min.toString().padLeft(2, '0')}";
+      fieldName = "$date-${hour.toString().padLeft(2, '0')}";
       value = documentSnapshot[fieldName];
     }
     return value;
   }
 
+  /* =================================== Read data Temp in day ========================================== */
   Future<int> readTempFromFireStore(String date, int hour, int min) async {
-    DocumentSnapshot documentSnapshot =
-        await FirebaseFirestore.instance.collection('ROOM 2').doc('TEMP').get();
+    DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+        .collection('ROOM 2')
+        .doc('TEMP_inhour')
+        .get();
     int value = 0;
     late String fieldName;
 
     if (documentSnapshot.exists) {
-      fieldName =
-          "$date-${hour.toString().padLeft(2, '0')}:${min.toString().padLeft(2, '0')}";
+      fieldName = "$date-${hour.toString().padLeft(2, '0')}";
       value = documentSnapshot[fieldName];
     }
     return value;
   }
 
-  /* return value after read value 30 times in Fire Store */
-/*   Future<int> returnValueGasAverage(String date, int hour, int min) async {
-    int sum = 0;
-    for (int i = min; i < min + 30; i = i + 2) {
-      int valueFromFireStore = await readGasFromFireStore(date, hour, i);
-      sum = sum + valueFromFireStore;
-    }
-    print((sum ~/ 15).toInt());
-    return (sum ~/ 15).toInt();
-  } */
-
+  /* =================================== Read data Temp in day ========================================== */
   Future<List<FlSpot>> generateGasSpots() async {
     List<FlSpot> spots = [];
 
     double hour = 0;
-    double min = 0;
     int valueBeDraw = 40;
 
-    for (int i = 0; i < 48; i++) {
-      int getValue =
-          await readGasFromFireStore(days, hour.toInt(), min.toInt());
-      if (getValue > 100) {
-        valueBeDraw = getValue % 100;
-      } else {
-        valueBeDraw = getValue;
-      }
-      double a = valueBeDraw.toDouble();
-      double xValue = hour + min / 60;
-      spots.add(FlSpot(xValue, a));
-      min += 30;
-      if (min >= 60) {
-        hour++;
-        min = 0;
-      }
+    for (int i = 0; i < 24; i++) {
+      int getValue = await readGasFromFireStore(days, hour.toInt(), 0);
+      print(getValue);
+      valueBeDraw = getValue % 100;
+      spots.add(FlSpot(hour, valueBeDraw.toDouble()));
+      hour++;
     }
-
     return spots;
   }
 
+  /* =================================== Read data Temp in day ========================================== */
   Future<List<FlSpot>> generateTempSpots() async {
     List<FlSpot> spots = [];
 
     double hour = 0;
-    double min = 0;
     int valueBeDraw = 40;
 
-    for (int i = 0; i < 48; i++) {
-      if (hour < 5) {
-        int getValue =
-            await readTempFromFireStore(days, hour.toInt(), min.toInt());
-        if (getValue > 100) {
-          valueBeDraw = getValue ~/ 100;
-        }
-      } else if (hour < 14) {
-        valueBeDraw = 20;
-      } else {
-        valueBeDraw = 67;
-      }
-      double a = valueBeDraw.toDouble();
-      double xValue = hour + min / 60;
-      spots.add(FlSpot(xValue, a));
-      min += 30;
-      if (min >= 60) {
-        hour++;
-        min = 0;
-      }
+    for (int i = 0; i < 24; i++) {
+      print("value of hour: $hour");
+      int getValue = await readTempFromFireStore(days, hour.toInt(), 0);
+      print(getValue);
+      valueBeDraw = getValue % 100;
+      spots.add(FlSpot(hour, valueBeDraw.toDouble()));
+      hour++;
     }
-
     return spots;
   }
 
-  /* func to return value of day */
+  /* =================================== Read data Gas Threshold in day ========================================== */
+  Future<List<FlSpot>> generateGasThreshold() async {
+    List<FlSpot> spots = [];
+
+    double hour = 0;
+    int valueBeDraw = 40;
+
+    for (int i = 0; i < 24; i++) {
+      print("value of hour in threshold: $hour");
+      int getValue = await readGasFromFireStore(days, hour.toInt(), 0);
+      valueBeDraw = getValue ~/ 100;
+      spots.add(FlSpot(hour, valueBeDraw.toDouble()));
+      hour++;
+    }
+    return spots;
+  }
+
+  /* =================================== Read data Temp Threshold in day ========================================== */
+  Future<List<FlSpot>> generateTempThreshold() async {
+    List<FlSpot> spots = [];
+
+    double hour = 0;
+    int valueBeDraw = 40;
+
+    for (int i = 0; i < 24; i++) {
+      print("value of hour in threshold: $hour");
+      int getValue = await readTempFromFireStore(days, hour.toInt(), 0);
+      valueBeDraw = getValue ~/ 100;
+      spots.add(FlSpot(hour, valueBeDraw.toDouble()));
+      hour++;
+    }
+    return spots;
+  }
+
+  /* ========================================= func to return value of day ===================================== */
   int returnDayOfMonth(String str) {
     int month = int.parse(str[5]) * 10 + int.parse(str[6]);
     if (month == 2) {
@@ -417,7 +380,7 @@ class LineChartWidget extends StatelessWidget {
     return int.parse(str[5]) * 10 + int.parse(str[6]);
   }
 
-  /* =================================== Read data Temp in day ========================================== */
+  /* ======================================== Read data Temp in day ============================================ */
   Future<int> readTempFromFireStoreInDay(String date) async {
     DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
         .collection('ROOM 2')
@@ -429,6 +392,67 @@ class LineChartWidget extends StatelessWidget {
       value = documentSnapshot[date];
     }
     return value;
+  }
+
+  /* =================================== Read data Gas in day ========================================== */
+  Future<int> readGasFromFireStoreInDay(String date) async {
+    DocumentSnapshot documentSnapshot = await FirebaseFirestore.instance
+        .collection('ROOM 2')
+        .doc('GAS_inday')
+        .get();
+    int value = 0;
+
+    if (documentSnapshot.exists) {
+      value = documentSnapshot[date];
+    }
+    return value;
+  }
+
+  /* =================================== Read data Gas in range of days ========================================== */
+  Future<List<FlSpot>> generateGasSpotsRangeDays(
+      String startDay, String endDay) async {
+    List<FlSpot> spots = [];
+    String year = startDay[0] + startDay[1] + startDay[2] + startDay[3];
+    String startDay_ = startDay[8] + startDay[9];
+    String endDay_ = endDay[8] + endDay[9];
+    String startMonth_ = startDay[5] + startDay[6];
+    String endMonth_ = endDay[5] + endDay[6];
+    int valueBeDraw = 40;
+    double xValue = 0;
+    /* count days between start and end range of day */
+    int monthOfStart = monthOfStr(startDay);
+    int monthOfEnd = monthOfStr(endDay);
+
+    /* get data */
+    if (monthOfEnd > monthOfStart) {
+      // difference month
+      for (int i = int.parse(startDay_); i <= returnDayOfMonth(startDay); i++) {
+        String day = "$year.$startMonth_.${i ~/ 10}${i % 10}";
+        print(day);
+        int a = await (readGasFromFireStoreInDay(day));
+        valueBeDraw = a % 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+      for (int i = 1; i <= int.parse(endDay_); i++) {
+        String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
+        print(day);
+        int a = await (readGasFromFireStoreInDay(day));
+        valueBeDraw = a % 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+    } else {
+      // same month
+      for (int i = int.parse(startDay_); i <= int.parse(endDay_); i++) {
+        String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
+        int a = await readGasFromFireStoreInDay(day);
+        valueBeDraw = a % 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+    }
+    return spots;
   }
 
 /* =================================== Read data Temp in range of days ========================================== */
@@ -452,14 +476,16 @@ class LineChartWidget extends StatelessWidget {
       for (int i = int.parse(startDay_); i <= returnDayOfMonth(startDay); i++) {
         String day = "$year.$startMonth_.${i ~/ 10}${i % 10}";
         print(day);
-        valueBeDraw = await readTempFromFireStoreInDay(day);
+        int a = await (readTempFromFireStoreInDay(day));
+        valueBeDraw = a % 100;
         spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
         xValue = xValue + 1;
       }
       for (int i = 1; i <= int.parse(endDay_); i++) {
         String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
         print(day);
-        valueBeDraw = await readTempFromFireStoreInDay(day);
+        int a = await (readTempFromFireStoreInDay(day));
+        valueBeDraw = a % 100;
         spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
         xValue = xValue + 1;
       }
@@ -467,8 +493,8 @@ class LineChartWidget extends StatelessWidget {
       // same month
       for (int i = int.parse(startDay_); i <= int.parse(endDay_); i++) {
         String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
-        print(day);
-        valueBeDraw = await readTempFromFireStoreInDay(day);
+        int a = await readTempFromFireStoreInDay(day);
+        valueBeDraw = a % 100;
         spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
         xValue = xValue + 1;
       }
@@ -477,32 +503,97 @@ class LineChartWidget extends StatelessWidget {
     return spots;
   }
 
-/* ====================================== func to click select one day ==================================== */
-  Future<List<FlSpot>> generateGasSpotsRangeDays() async {
+  /* =================================== Read data Gas threshold in range of days ========================================== */
+  Future<List<FlSpot>> generateGasThresholdRangeDays(
+      String startDay, String endDay) async {
     List<FlSpot> spots = [];
-
-    double hour = 0;
-    double min = 0;
+    String year = startDay[0] + startDay[1] + startDay[2] + startDay[3];
+    String startDay_ = startDay[8] + startDay[9];
+    String endDay_ = endDay[8] + endDay[9];
+    String startMonth_ = startDay[5] + startDay[6];
+    String endMonth_ = endDay[5] + endDay[6];
     int valueBeDraw = 40;
+    double xValue = 0;
+    /* count days between start and end range of day */
+    int monthOfStart = monthOfStr(startDay);
+    int monthOfEnd = monthOfStr(endDay);
 
-    for (int i = 0; i < 48; i++) {
-      int getValue =
-          await readGasFromFireStore(days, hour.toInt(), min.toInt());
-      if (getValue > 100) {
-        valueBeDraw = getValue % 100;
-      } else {
-        valueBeDraw = getValue;
+    /* get data */
+    if (monthOfEnd > monthOfStart) {
+      // difference month
+      for (int i = int.parse(startDay_); i <= returnDayOfMonth(startDay); i++) {
+        String day = "$year.$startMonth_.${i ~/ 10}${i % 10}";
+        int a = await (readGasFromFireStoreInDay(day));
+        valueBeDraw = a ~/ 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
       }
-      double a = valueBeDraw.toDouble();
-      double xValue = hour + min / 60;
-      spots.add(FlSpot(xValue, a));
-      min += 30;
-      if (min >= 60) {
-        hour++;
-        min = 0;
+      for (int i = 1; i <= int.parse(endDay_); i++) {
+        String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
+        print(day);
+        int a = await (readGasFromFireStoreInDay(day));
+        valueBeDraw = a ~/ 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+    } else {
+      // same month
+      for (int i = int.parse(startDay_); i <= int.parse(endDay_); i++) {
+        String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
+        print(day);
+        int a = await (readGasFromFireStoreInDay(day));
+        valueBeDraw = a ~/ 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
       }
     }
+    return spots;
+  }
 
+  /* =================================== Read data Temp in range of days ========================================== */
+  Future<List<FlSpot>> generateTempThresholdRangeDays(
+      String startDay, String endDay) async {
+    List<FlSpot> spots = [];
+    String year = startDay[0] + startDay[1] + startDay[2] + startDay[3];
+    String startDay_ = startDay[8] + startDay[9];
+    String endDay_ = endDay[8] + endDay[9];
+    String startMonth_ = startDay[5] + startDay[6];
+    String endMonth_ = endDay[5] + endDay[6];
+    int valueBeDraw = 40;
+    double xValue = 0;
+    /* count days between start and end range of day */
+    int monthOfStart = monthOfStr(startDay);
+    int monthOfEnd = monthOfStr(endDay);
+
+    /* get data */
+    if (monthOfEnd > monthOfStart) {
+      // difference month
+      for (int i = int.parse(startDay_); i <= returnDayOfMonth(startDay); i++) {
+        String day = "$year.$startMonth_.${i ~/ 10}${i % 10}";
+        int a = await (readTempFromFireStoreInDay(day));
+        valueBeDraw = a ~/ 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+      for (int i = 1; i <= int.parse(endDay_); i++) {
+        String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
+        print(day);
+        int a = await (readTempFromFireStoreInDay(day));
+        valueBeDraw = a ~/ 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+    } else {
+      // same month
+      for (int i = int.parse(startDay_); i <= int.parse(endDay_); i++) {
+        String day = "$year.$endMonth_.${i ~/ 10}${i % 10}";
+        print(day);
+        int a = await (readTempFromFireStoreInDay(day));
+        valueBeDraw = a ~/ 100;
+        spots.add(FlSpot(xValue, valueBeDraw.toDouble()));
+        xValue = xValue + 1;
+      }
+    }
     return spots;
   }
 
@@ -512,83 +603,216 @@ class LineChartWidget extends StatelessWidget {
       // select day
       if (dataBeShown == 'Gas') {
         return generateGasSpots();
-      } else if (dataBeShown == 'Temp') {
-        return generateTempSpots();
       } else {
-        return [];
+        return generateTempSpots();
       }
     } else {
       // select range of day
       if (dataBeShown == 'Gas') {
-        return generateGasSpotsRangeDays();
-      } else if (dataBeShown == 'Temp') {
-        return generateTempSpotsRangeDays(startDay, endDay);
+        return generateGasSpotsRangeDays(startDay, endDay);
       } else {
-        return [];
+        return generateTempSpotsRangeDays(startDay, endDay);
       }
     }
   }
 
+  /* ====================================== func to click to draw data threshold ==================================== */
+  Future<List<FlSpot>> selectDataThreshold() async {
+    if (isDayOrMonth == false) {
+      // select day
+      if (dataBeShown == 'Gas') {
+        return generateGasThreshold();
+      } else {
+        return generateTempThreshold();
+      }
+    } else {
+      // select range of day
+      if (dataBeShown == 'Gas') {
+        return generateGasThresholdRangeDays(startDay, endDay);
+      } else {
+        return generateTempThresholdRangeDays(startDay, endDay);
+      }
+    }
+  }
+
+  int returnValueX() {
+    if (isDayOrMonth) {
+      String startDay_ = startDay[8] + startDay[9];
+      String endDay_ = endDay[8] + endDay[9];
+      String startMonth_ = startDay[5] + startDay[6];
+      String endMonth_ = endDay[5] + endDay[6];
+      int days = (int.parse(startMonth_) < int.parse(endMonth_))
+          ? (returnDayOfMonth(startDay) -
+              int.parse(startDay_) +
+              1 +
+              int.parse(endDay_))
+          : (int.parse(endDay_) - int.parse(startDay_) + 1);
+      print(days);
+      return days;
+    } else {
+      return 24;
+    }
+  }
+
+  /* ====================================== ************************************* ==================================== */
   @override
   Widget build(BuildContext context) {
-    print(acceptToDraw);
-    if (acceptToDraw == true) {
-      return Stack(
-        children: [
-          FutureBuilder<List<FlSpot>>(
-            future: selectDataBeShown(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Container(
-                  padding: const EdgeInsets.all(10),
-                  width: 100,
-                  height: 100,
-                  child: const CircularProgressIndicator(),
-                );
-              } else if (snapshot.hasError) {
-                return Text('Error: ${snapshot.error}');
-              } else {
-                List<FlSpot> spots = snapshot.data!;
-                return Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    width: double.infinity,
-                    height: 500,
-                    child: LineChart(
-                      LineChartData(
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: spots,
-                            //isCurved: true,
-                            color: Colors.blue,
-                            barWidth: 2,
-                            isStrokeCapRound: true,
-                            belowBarData: BarAreaData(show: false),
-                            dotData: const FlDotData(
-                              show: false,
+    return Stack(
+      children: [
+        FutureBuilder<List<FlSpot>>(
+          future: selectDataBeShown(),
+          builder: (context, snapshotData) {
+            if (snapshotData.connectionState == ConnectionState.waiting) {
+              return Container(
+                padding: const EdgeInsets.all(10),
+                width: 100,
+                height: 100,
+                child: const CircularProgressIndicator(),
+              );
+            } else if (snapshotData.hasError) {
+              return Text('Error: ${snapshotData.error}');
+            } else {
+              List<FlSpot> dataSpots = snapshotData.data!;
+              return FutureBuilder<List<FlSpot>>(
+                future: selectDataThreshold(),
+                builder: (context, snapshotThreshold) {
+                  if (snapshotThreshold.connectionState ==
+                      ConnectionState.waiting) {
+                    return Container(
+                      padding: const EdgeInsets.all(10),
+                      width: 100,
+                      height: 100,
+                      child: const CircularProgressIndicator(),
+                    );
+                  } else if (snapshotThreshold.hasError) {
+                    return Text('Error: ${snapshotThreshold.error}');
+                  } else {
+                    List<FlSpot> thresholdSpots = snapshotThreshold.data!;
+                    return Stack(
+                      children: [
+                        Align(
+                          alignment: Alignment.center,
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            /* width: double.infinity,
+                            height: 700, */
+                            width: MediaQuery.of(context).size.width,
+                            height: MediaQuery.of(context).size.height * 0.8,
+                            child: LineChart(
+                              LineChartData(
+                                lineBarsData: [
+                                  LineChartBarData(
+                                    spots: dataSpots,
+                                    color: Colors.blue,
+                                    barWidth: 4,
+                                    isStrokeCapRound: true,
+                                    isCurved: false,
+                                    belowBarData: BarAreaData(show: false),
+                                    dotData: const FlDotData(
+                                      show: false,
+                                    ),
+                                  ),
+                                  LineChartBarData(
+                                    spots: thresholdSpots,
+                                    color: Colors.red,
+                                    barWidth: 4,
+                                    isStrokeCapRound: true,
+                                    isCurved: false,
+                                    belowBarData: BarAreaData(show: false),
+                                    dotData: const FlDotData(
+                                      show: false,
+                                    ),
+                                  )
+                                ],
+                                titlesData: const FlTitlesData(
+                                    bottomTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                      showTitles: true,
+                                    )),
+                                    rightTitles: AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: false)),
+                                    topTitles: AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: false))),
+                                borderData: FlBorderData(
+                                  show: true,
+                                  border:
+                                      Border.all(color: Colors.black, width: 1),
+                                ),
+                                minX: 0,
+                                maxX: returnValueX() - 1,
+                                minY: 0,
+                                maxY: 100,
+                              ),
                             ),
-                          )
-                        ],
-                        borderData: FlBorderData(
-                          show: true,
-                          border: Border.all(color: Colors.black, width: 1),
+                          ),
                         ),
-                        minX: 0,
-                        maxX: 25 - 1,
-                        minY: 0,
-                        maxY: 100,
-                      ),
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-      );
-    } else {
-      return const SizedBox();
-    }
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.5),
+                                  spreadRadius: 1,
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 20,
+                                      height: 8,
+                                      color: Colors.blue,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    const Text(
+                                      'Value',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 20,
+                                      height: 8,
+                                      color: Colors.red,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    const Text(
+                                      'Threshold',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                },
+              );
+            }
+          },
+        ),
+      ],
+    );
   }
 }

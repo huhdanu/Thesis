@@ -1,6 +1,8 @@
 import 'dart:ffi';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,7 +15,7 @@ class Kitchen extends StatefulWidget {
   const Kitchen({Key? key}) : super(key: key);
 
   @override
-  _Kitchen createState() => _Kitchen();
+  _Bedroom createState() => _Bedroom();
 }
 
 class FanWidget extends StatefulWidget {
@@ -28,6 +30,7 @@ class FanWidget extends StatefulWidget {
 class _FanWidgetState extends State<FanWidget> {
   String dataALARMDetect = '0', dataLAMPDetect = '0', dataPUMPDetect = '0';
   bool isActive = false;
+  String Option = "";
 
   final DatabaseReference deviceALARM =
       FirebaseDatabase.instance.ref('ROOM2/DEVICES').child('Alarm');
@@ -38,13 +41,15 @@ class _FanWidgetState extends State<FanWidget> {
   final DatabaseReference devicePUMP = FirebaseDatabase.instance.ref('Pump');
 
   final DatabaseReference detectActiveALARM =
-      FirebaseDatabase.instance.ref('ACTIVE/IsAlarmActiveRoom2');
+      FirebaseDatabase.instance.ref('ACTIVE/IsAlarmActiveRoom1');
 
   final DatabaseReference detectActiveLAMP =
-      FirebaseDatabase.instance.ref('ACTIVE/IsLampActiveRoom2');
+      FirebaseDatabase.instance.ref('ACTIVE/IsLampActiveRoom1');
 
   final DatabaseReference detectActivePUMP =
       FirebaseDatabase.instance.ref('ACTIVE/IsPumpActive');
+
+  final DatabaseReference readOPTION = FirebaseDatabase.instance.ref('OPTION');
 
   void getStateDevices() {
     if (widget.title == 'ALARM') {
@@ -86,9 +91,85 @@ class _FanWidgetState extends State<FanWidget> {
     }
   }
 
+  void _showConfirmationDialog(BuildContext context) {
+    String _title = widget.title;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: const Center(
+                child: Text('Confirm'),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      style: const TextStyle(
+                        fontSize: 20,
+                        color: Colors.black, // Optional: Set text color
+                      ),
+                      children: <TextSpan>[
+                        TextSpan(
+                          text:
+                              'You want to set $_title, it will be switched to ',
+                        ),
+                        const TextSpan(
+                          text: 'AUTO mode?',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    // set optione in firebase
+                    readOPTION.set(false);
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void toggleDevice() {
+    readOPTION.onValue.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            Option = event.snapshot.value.toString();
+          });
+        }
+      },
+    );
     setState(() {
-      isActive = !isActive;
+      if (Option == "true") {
+        (_showConfirmationDialog(context));
+        isActive = !isActive;
+      } else {
+        isActive = !isActive;
+      }
+
       if (widget.title == 'ALARM') {
         isActive ? deviceALARM.set(true) : deviceALARM.set(false);
       } else if (widget.title == 'LAMP') {
@@ -202,7 +283,7 @@ class _FanWidgetState extends State<FanWidget> {
   }
 }
 
-class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
+class _Bedroom extends State<Kitchen> with WidgetsBindingObserver {
   int _dtemp = 0; // temp variable
   int _dgas = 0; // temp humidity
 
@@ -213,9 +294,9 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
   int tempThreshold = 20;
   bool flagSendData = false;
 
-  /*  */
   bool _sliderChangingGAS = false;
   bool _sliderChangingTEMP = false;
+
   /* syntax for CRUD data in Realtime database */
   final DatabaseReference databaseTEMP =
       FirebaseDatabase.instance.ref('ROOM2/SENSORS').child('Temperature');
@@ -225,7 +306,7 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
       fieldName: value,
     };
 
-    FirebaseFirestore.instance.collection('ROOM 2').doc('GAS').update(userData);
+    FirebaseFirestore.instance.collection('ROOM 1').doc('GAS').update(userData);
   }
 
   void sendTempToFireStore(String fieldName, int value) {
@@ -234,7 +315,7 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
     };
 
     FirebaseFirestore.instance
-        .collection('ROOM 2')
+        .collection('ROOM 1')
         .doc('TEMP')
         .update(userData);
   }
@@ -340,7 +421,7 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
 
   Future<void> fetchDocumentFromFirestore(String day) async {
     DocumentSnapshot documentSnapshot =
-        await FirebaseFirestore.instance.collection('ROOM 2').doc('GAS').get();
+        await FirebaseFirestore.instance.collection('ROOM 1').doc('GAS').get();
     String date;
 
     if (documentSnapshot.exists) {
@@ -379,7 +460,6 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
             TextButton(
               onPressed: () {
                 showPasswordDialogGAS(newValue);
-                //fetchDocumentFromFirestore("2024.05.05");
               },
               child: const Text('Yes'),
             ),
@@ -463,7 +543,7 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
       },
     );
 
-    /* get data for GAS sensor */
+    /* get data for HUM sensor */
     databaseGAS.onValue.listen(
       (event) {
         if (mounted) {
@@ -492,7 +572,7 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
     /* get data TEMP threshold */
     databaseTEMPThreshold.onValue.listen(
       (event) {
-        if (_sliderChangingTEMP) {
+        if (!_sliderChangingTEMP) {
           if (mounted) {
             setState(() {
               String tempThrehold_ = event.snapshot.value.toString();
@@ -522,36 +602,28 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
                     child: const Icon(Icons.arrow_back_ios_new,
                         color: Colors.black),
                   ),
-                  const Text(
-                    'KITCHEN',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  const Expanded(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        'KITCHEN',
+                        style: TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ),
-                  PopupMenuButton(
-                    icon: const Icon(Icons.menu),
-                    itemBuilder: (BuildContext context) => [
-                      const PopupMenuItem(
-                        child: Text('Check data'),
-                        value: 'Option 1',
-                      ),
-                      const PopupMenuItem(
-                        child: Text('Camera'),
-                        value: 'Option 2',
-                      ),
-                    ],
-                    onSelected: (value) {
-                      if (value == 'Option 1') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => Database()),
-                        );
-                      } else if (value == 'Option 2') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => Camera()),
-                        );
-                      }
+                  /* GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => Camera()),
+                      );
                     },
-                  ),
+                    child: const Icon(
+                      Icons.video_camera_back_outlined,
+                      color: Colors.black,
+                    ),
+                  ), */
                 ],
               ),
               Expanded(
@@ -630,7 +702,7 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
                               _showConfirmationDialogTemp(newValue);
                               _sliderChangingTEMP = false;
                             },
-                            max: 90,
+                            max: 70,
                             min: 0,
                           ),
                           const Padding(
@@ -639,8 +711,8 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('10°C'),
-                                Text('50°C'),
-                                Text('99°C'),
+                                Text('40°C'),
+                                Text('70°C'),
                               ],
                             ),
                           )
@@ -669,7 +741,7 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
                                   ),
                                 ),
                                 Text(
-                                  '$gasThreshold ppm',
+                                  '$gasThreshold %',
                                   style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold),
@@ -690,10 +762,11 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
                               });
                             },
                             onChangeEnd: (newValue) {
+                              gasThreshold = newValue.toInt();
                               _showConfirmationDialogGAS(newValue);
                               _sliderChangingGAS = false;
                             },
-                            max: 100,
+                            max: 80,
                             min: 0,
                           ),
                           const Padding(
@@ -701,9 +774,9 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('5ppm'),
-                                Text('55ppm'),
-                                Text('99ppm'),
+                                Text('10%'),
+                                Text('50%'),
+                                Text('80%'),
                               ],
                             ),
                           )
@@ -763,17 +836,38 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
       end: Alignment.centerLeft,
     );
 
-    return CircularPercentIndicator(
-      radius: radiusValue.toDouble(),
-      lineWidth: 14,
-      percent: value / 100,
-      backgroundColor: Colors.grey,
-      linearGradient: gradient,
-      center: Text(
-        value.toString() + '\u00B0', // assign from value to string in Dart
-        style: const TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
+    return GestureDetector(
+      onTap: () {
+        if (title == 'Temparature') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => Database(
+                      dataShow: title,
+                    )),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => Database(
+                      dataShow: title,
+                    )),
+          );
+        }
+      },
+      child: CircularPercentIndicator(
+        radius: radiusValue.toDouble(),
+        lineWidth: 14,
+        percent: value / 100,
+        backgroundColor: Colors.grey,
+        linearGradient: gradient,
+        center: Text(
+          value.toString() + '\u00B0', // assign from value to string in Dart
+          style: const TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -784,18 +878,33 @@ class _Kitchen extends State<Kitchen> with WidgetsBindingObserver {
     required double valueHori,
   }) {
     return GestureDetector(
+        onTap: () {
+          if (title == "Temperature") {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => Database(dataShow: title)),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => Database(dataShow: title)),
+            );
+          }
+        },
         child: Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: valueHori,
-      ),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: Colors.pink,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    ));
+          padding: EdgeInsets.symmetric(
+            horizontal: valueHori,
+          ),
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: Colors.pink,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ));
   }
 }
