@@ -221,7 +221,7 @@ class _MyAppState extends State<Database> {
                     ),
                     Expanded(
                         child: Align(
-                            alignment: Alignment.center,
+                            alignment: Alignment.topCenter,
                             child: LineChartWidget(
                               isDayOrMonth: selectType,
                               days: selectedDate,
@@ -691,11 +691,13 @@ class LineChartWidget extends StatelessWidget {
                     return Stack(
                       children: [
                         Align(
-                          alignment: Alignment.bottomCenter,
+                          alignment: Alignment.center,
                           child: Container(
                             padding: const EdgeInsets.all(10),
-                            width: double.infinity,
-                            height: 600,
+                            /* width: double.infinity,
+                            height: 700, */
+                            width: MediaQuery.of(context).size.width,
+                            height: MediaQuery.of(context).size.height * 0.8,
                             child: LineChart(
                               LineChartData(
                                 lineBarsData: [

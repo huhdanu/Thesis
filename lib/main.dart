@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_home/room/kitchen_room.dart'; // temparature template
 import 'package:flutter_smart_home/room/bed_room.dart'; // energy template
+import 'package:flutter_smart_home/change_phone_num.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 
@@ -178,12 +179,36 @@ class _HomePageState extends State<HomePage> {
                       size: 25,
                     ),
                   ) */
-                  ElevatedButton(
+                  PopupMenuButton(
+                    icon: const Icon(Icons.menu),
+                    itemBuilder: (BuildContext context) => [
+                      const PopupMenuItem(
+                        child: Text('Change phone number'),
+                        value: 'Option 1',
+                      ),
+                      const PopupMenuItem(
+                        child: Text('Sign out'),
+                        value: 'Option 2',
+                      ),
+                    ],
+                    onSelected: (value) {
+                      if (value == 'Option 1') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ChangeNumber()),
+                        );
+                      } else if (value == 'Option 2') {
+                        _logout(context);
+                      }
+                    },
+                  ),
+                  /* ElevatedButton(
                     onPressed: () {
                       _logout(context);
                     },
                     child: const Text('Sign out'),
-                  ),
+                  ), */
                 ],
               ),
               Expanded(

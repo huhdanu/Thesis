@@ -617,7 +617,7 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
                               _showConfirmationDialogTemp(newValue);
                               _sliderChangingTEMP = false;
                             },
-                            max: 90,
+                            max: 70,
                             min: 0,
                           ),
                           const Padding(
@@ -626,8 +626,8 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('10°C'),
-                                Text('50°C'),
-                                Text('90°C'),
+                                Text('40°C'),
+                                Text('70°C'),
                               ],
                             ),
                           )
@@ -656,7 +656,7 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
                                   ),
                                 ),
                                 Text(
-                                  '$gasThreshold ppm',
+                                  '$gasThreshold %',
                                   style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold),
@@ -681,7 +681,7 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
                               _showConfirmationDialogGAS(newValue);
                               _sliderChangingGAS = false;
                             },
-                            max: 100,
+                            max: 80,
                             min: 0,
                           ),
                           const Padding(
@@ -689,9 +689,9 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('5ppm'),
-                                Text('55ppm'),
-                                Text('99ppm'),
+                                Text('10%'),
+                                Text('50%'),
+                                Text('80%'),
                               ],
                             ),
                           )
