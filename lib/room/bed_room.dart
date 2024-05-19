@@ -30,6 +30,7 @@ class FanWidget extends StatefulWidget {
 class _FanWidgetState extends State<FanWidget> {
   String dataALARMDetect = '0', dataLAMPDetect = '0', dataPUMPDetect = '0';
   bool isActive = false;
+  String Option = "";
 
   final DatabaseReference deviceALARM =
       FirebaseDatabase.instance.ref('Room1/DEVICES').child('Alarm');
@@ -47,6 +48,8 @@ class _FanWidgetState extends State<FanWidget> {
 
   final DatabaseReference detectActivePUMP =
       FirebaseDatabase.instance.ref('ACTIVE/IsPumpActive');
+
+  final DatabaseReference readOPTION = FirebaseDatabase.instance.ref('OPTION');
 
   void getStateDevices() {
     if (widget.title == 'ALARM') {
@@ -88,9 +91,85 @@ class _FanWidgetState extends State<FanWidget> {
     }
   }
 
+  void _showConfirmationDialog(BuildContext context) {
+    String _title = widget.title;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: const Center(
+                child: Text('Confirm'),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      style: const TextStyle(
+                        fontSize: 20,
+                        color: Colors.black, // Optional: Set text color
+                      ),
+                      children: <TextSpan>[
+                        TextSpan(
+                          text:
+                              'You want to set $_title, it will be switched to ',
+                        ),
+                        const TextSpan(
+                          text: 'AUTO mode?',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    // set optione in firebase
+                    readOPTION.set(false);
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void toggleDevice() {
+    readOPTION.onValue.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            Option = event.snapshot.value.toString();
+          });
+        }
+      },
+    );
     setState(() {
-      isActive = !isActive;
+      if (Option == "true") {
+        (_showConfirmationDialog(context));
+        isActive = !isActive;
+      } else {
+        isActive = !isActive;
+      }
+
       if (widget.title == 'ALARM') {
         isActive ? deviceALARM.set(true) : deviceALARM.set(false);
       } else if (widget.title == 'LAMP') {
