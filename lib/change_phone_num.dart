@@ -53,12 +53,12 @@ class _ChangeNumber extends State<ChangeNumber> {
             ),
             const SizedBox(height: 20),
             const Text(
-              'Currently phone number:',
+              'Current phone number:',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             Text(
-              recentPhoneNumber, // Display the recent phone number here
+              recentPhoneNumber,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 30),

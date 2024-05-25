@@ -22,7 +22,7 @@ class Camera extends StatelessWidget {
         useMaterial3: true,
       ),
       home: MyHomePage(
-        channel: IOWebSocketChannel.connect('ws://172.20.10.2:8888'),
+        channel: IOWebSocketChannel.connect('ws://18.143.118.1:8888'),
       ),
     );
   }

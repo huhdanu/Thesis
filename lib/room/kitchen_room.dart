@@ -236,7 +236,10 @@ class _FanWidgetState extends State<FanWidget> {
   Widget getImage() {
     if (widget.title == 'ALARM') {
       return Image.asset(
-          isActive ? 'assets/images/fan-2.png' : 'assets/images/fan-1.png');
+        isActive ? 'assets/images/alarm_on.png' : 'assets/images/alarm_off.png',
+        width: 40,
+        height: 40,
+      );
     } else if (widget.title == 'LAMP') {
       return Image.asset(
         isActive ? 'assets/images/light_on.png' : 'assets/images/light_off.png',
@@ -536,7 +539,14 @@ class _Bedroom extends State<Kitchen> with WidgetsBindingObserver {
       (event) {
         if (mounted) {
           setState(() {
-            String temp_ = event.snapshot.value.toString();
+            int tempVala = 0;
+            var a = event.snapshot.value;
+            if (a is int) {
+              tempVala = a;
+            } else if (a is double) {
+              tempVala = a.floor();
+            }
+            String temp_ = tempVala.toString();
             tempVal = int.parse(temp_);
           });
         }
@@ -548,7 +558,14 @@ class _Bedroom extends State<Kitchen> with WidgetsBindingObserver {
       (event) {
         if (mounted) {
           setState(() {
-            String gasVal_ = event.snapshot.value.toString();
+            int gasVala = 0;
+            var a = event.snapshot.value;
+            if (a is int) {
+              gasVala = a;
+            } else if (a is double) {
+              gasVala = a.floor();
+            }
+            String gasVal_ = gasVala.toString();
             gasVal = int.parse(gasVal_);
           });
         }

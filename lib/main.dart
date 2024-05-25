@@ -241,7 +241,7 @@ class _HomePageState extends State<HomePage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _cardMenu(
-                          icon: 'assets/images/energy.png',
+                          icon: 'assets/images/bed_room.png',
                           title: 'BEDROOM',
                           onTap: () {
                             Navigator.push(
@@ -254,7 +254,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         _cardMenu(
                           title: 'KITCHEN',
-                          icon: 'assets/images/temperature.png',
+                          icon: 'assets/images/kitchen_room.png',
                           onTap: () {
                             Navigator.push(
                               context,
@@ -267,7 +267,24 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 50),
+                    const SizedBox(
+                      height: 80,
+                    ),
+                    const Text(
+                      'SVTH Dương Văn Thành - 20161370',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    const Text(
+                      'SVTH Nguyễn Hữu Danh - 20161298',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -289,8 +306,8 @@ class _HomePageState extends State<HomePage> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
-          vertical: 40,
-          horizontal: 20,
+          vertical: 20,
+          horizontal: 10,
         ),
         width: 160,
         decoration: BoxDecoration(
@@ -305,7 +322,11 @@ class _HomePageState extends State<HomePage> {
                   fontWeight: FontWeight.bold, color: fontColor, fontSize: 20),
             ),
             const SizedBox(height: 20),
-            Image.asset(icon),
+            Image.asset(
+              icon,
+              width: 100,
+              height: 100,
+            ),
           ],
         ),
       ),
