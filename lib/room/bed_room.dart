@@ -30,7 +30,22 @@ class FanWidget extends StatefulWidget {
 class _FanWidgetState extends State<FanWidget> {
   String dataALARMDetect = '0', dataLAMPDetect = '0', dataPUMPDetect = '0';
   bool isActive = false;
-  String Option = "";
+  String Option = "true";
+
+  @override
+  void initState() {
+    super.initState();
+    readOPTION.onValue.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            Option = event.snapshot.value.toString();
+            print(Option);
+          });
+        }
+      },
+    );
+  }
 
   final DatabaseReference deviceALARM =
       FirebaseDatabase.instance.ref('Room1/DEVICES').child('Alarm');
@@ -165,7 +180,6 @@ class _FanWidgetState extends State<FanWidget> {
     setState(() {
       if (Option == "true") {
         (_showConfirmationDialog(context));
-        isActive = !isActive;
       } else {
         isActive = !isActive;
       }
@@ -282,6 +296,89 @@ class _FanWidgetState extends State<FanWidget> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class SwitchWidget extends StatefulWidget {
+  @override
+  _SwitchWidgetState createState() => _SwitchWidgetState();
+}
+
+class _SwitchWidgetState extends State<SwitchWidget> {
+  bool _isSwitched = false;
+  bool _previousSwitchState = false;
+
+  final DatabaseReference readOPTION = FirebaseDatabase.instance.ref('OPTION');
+  void _toggleSwitch(bool value) {
+    setState(() {
+      _isSwitched = value;
+      // send mode to firebase
+      _isSwitched ? (readOPTION.set(false)) : (readOPTION.set(true));
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    readOPTION.onValue.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            String option = event.snapshot.value.toString();
+            if (option != "true") {
+              // manual mode
+              _isSwitched = true;
+            } else {
+              // auto mode
+              _isSwitched = false;
+            }
+          });
+        }
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    /* get data TEMP threshold */
+    readOPTION.onValue.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            String option = event.snapshot.value.toString();
+            /* switch be show ON is auto mode */
+            if (option != "true") {
+              // manual mode
+              _isSwitched = true;
+            } else {
+              // auto mode
+              _isSwitched = false;
+            }
+          });
+        }
+      },
+    );
+    return Row(
+      children: [
+        Switch(
+          value: _isSwitched,
+          onChanged: (value) {
+            _previousSwitchState = _isSwitched;
+            _toggleSwitch(value);
+          },
+        ),
+        const SizedBox(
+          width: 20,
+        ),
+        Text(
+          (_isSwitched) ? 'AUTO' : 'MANUAL',
+          style: const TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -455,7 +552,7 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
                 fontWeight: FontWeight.bold,
               )),
           content: Text(
-              'Do you want to set the value of Threshold Gas to ${newValue.toInt()}ppm?',
+              'Do you want to set the value of Threshold Gas to ${newValue.toInt()}%?',
               style: const TextStyle(
                 fontSize: 18,
               )),
@@ -713,8 +810,8 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
                               _showConfirmationDialogTemp(newValue);
                               _sliderChangingTEMP = false;
                             },
-                            max: 70,
-                            min: 0,
+                            max: 99,
+                            min: 10,
                           ),
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 24),
@@ -722,8 +819,8 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('10°C'),
-                                Text('40°C'),
-                                Text('70°C'),
+                                Text('50°C'),
+                                Text('99°C'),
                               ],
                             ),
                           )
@@ -777,8 +874,8 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
                               _showConfirmationDialogGAS(newValue);
                               _sliderChangingGAS = false;
                             },
-                            max: 80,
-                            min: 0,
+                            max: 99,
+                            min: 10,
                           ),
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 24),
@@ -787,14 +884,18 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
                               children: [
                                 Text('10%'),
                                 Text('50%'),
-                                Text('80%'),
+                                Text('99%'),
                               ],
                             ),
-                          )
+                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(
+                      height: 15,
+                    ),
+                    SwitchWidget(),
+                    const SizedBox(height: 15),
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -847,6 +948,14 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
       end: Alignment.centerLeft,
     );
 
+    String getText() {
+      if (title == 'Temparature') {
+        return value.toString() + '\u00B0';
+      } else {
+        return value.toString() + '%';
+      }
+    }
+
     return GestureDetector(
       onTap: () {
         if (title == 'Temparature') {
@@ -854,7 +963,7 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
             context,
             MaterialPageRoute(
                 builder: (context) => Database(
-                      dataShow: title,
+                      typeShow: title,
                     )),
           );
         } else {
@@ -862,7 +971,7 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
             context,
             MaterialPageRoute(
                 builder: (context) => Database(
-                      dataShow: title,
+                      typeShow: title,
                     )),
           );
         }
@@ -874,7 +983,7 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
         backgroundColor: Colors.grey,
         linearGradient: gradient,
         center: Text(
-          value.toString() + '\u00B0', // assign from value to string in Dart
+          getText(),
           style: const TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
@@ -894,13 +1003,13 @@ class _Bedroom extends State<Bedroom> with WidgetsBindingObserver {
             Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => Database(dataShow: title)),
+                  builder: (context) => Database(typeShow: title)),
             );
           } else {
             Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => Database(dataShow: title)),
+                  builder: (context) => Database(typeShow: title)),
             );
           }
         },

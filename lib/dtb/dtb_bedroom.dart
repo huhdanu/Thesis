@@ -7,11 +7,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async'; /* for count time */
 
 class Database extends StatefulWidget {
-  String dataShow = "";
-  Database({required this.dataShow});
+  String typeShow = "";
+  Database({required this.typeShow});
 
   @override
-  _MyAppState createState() => _MyAppState(dataShow: dataShow);
+  _MyAppState createState() => _MyAppState(typeShow: typeShow);
 }
 
 class _MyAppState extends State<Database> {
@@ -24,14 +24,17 @@ class _MyAppState extends State<Database> {
     DateTime now = DateTime.now();
     DateTime adjustedDateTime = now.subtract(Duration(days: 1));
     selectedDate = formattedDate(adjustedDateTime);
-    String temp = formattedToShow(adjustedDateTime);
-    stringToShow = "History in $temp";
+    String dayShow = formattedToShow(adjustedDateTime);
+    (typeShow == "Gas")
+        ? (stringToShow = "History of Gas in $dayShow")
+        : (stringToShow = "History of Temp in $dayShow");
+    //stringToShow = "History in $temp";
   }
 
   /* declare variable for function get one day */
 
-  String dataShow = "";
-  _MyAppState({required this.dataShow});
+  String typeShow = "";
+  _MyAppState({required this.typeShow});
   /*============== variable for select day or range of day===================
   * false: showing data of day
   * true: showing data in range of day 
@@ -44,18 +47,20 @@ class _MyAppState extends State<Database> {
 
   /* ====================================== func to click select one day ==================================== */
   void _showDatePicker() async {
+    DateTime today = DateTime.now();
+    DateTime yesterday = today.subtract(const Duration(days: 1));
     DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: yesterday,
       firstDate: DateTime(2024, 4, 1),
-      lastDate: DateTime.now(),
+      lastDate: yesterday,
     );
     if (pickedDate != null) {
       setState(() {
         DateTime strReceive = pickedDate;
         selectedDate = formattedDate(strReceive);
         String a = formattedToShow(strReceive);
-        if (dataShow == "Gas") {
+        if (typeShow == "Gas") {
           stringToShow = "History of Gas in $a";
         } else {
           stringToShow = "History of Tempareture in $a";
@@ -139,7 +144,7 @@ class _MyAppState extends State<Database> {
 
             String a = formattedToShow(_startDate!);
             String b = formattedToShow(_endDate!);
-            if (dataShow == "Gas") {
+            if (typeShow == "Gas") {
               stringToShow = 'History of Gas from $a to $b';
             } else {
               stringToShow = 'History of Temperature from $a to $b';
@@ -225,7 +230,7 @@ class _MyAppState extends State<Database> {
                             child: LineChartWidget(
                               isDayOrMonth: selectType,
                               days: selectedDate,
-                              dataBeShown: dataShow,
+                              dataBeShown: typeShow,
                               startDay: startDay,
                               endDay: endDay,
                             ))),
