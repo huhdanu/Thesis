@@ -59,15 +59,20 @@ class _LoginPageState extends State<LoginPage> {
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
+              Image.asset(
+                'assets/images/logo.png',
+                height: 200,
+              ),
+              const SizedBox(height: 55),
               TextField(
                 controller: _loginController,
                 decoration: const InputDecoration(
                   labelText: 'Login name',
                 ),
               ),
-              const SizedBox(height: 20.0),
+              const SizedBox(height: 10.0),
               TextFormField(
                 controller: _passwordController,
                 obscureText: _isObscure,
@@ -85,7 +90,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20.0),
+              const SizedBox(height: 10.0),
               ElevatedButton(
                 onPressed: () {
                   _login();
@@ -164,7 +169,7 @@ class _HomePageState extends State<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Final Project',
+                    'HOME',
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.indigo,
@@ -225,12 +230,13 @@ class _HomePageState extends State<HomePage> {
                         scale: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    const Center(
+                    const SizedBox(height: 25),
+                    const Align(
+                      alignment: Alignment.center,
                       child: Text(
-                        'Smart Home',
+                        'THIẾT KẾ HỆ THỐNG BÁO CHÁY',
                         style: TextStyle(
-                          fontSize: 32,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

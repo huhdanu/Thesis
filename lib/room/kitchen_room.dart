@@ -810,10 +810,8 @@ class _Bedroom extends State<Kitchen> with WidgetsBindingObserver {
                                 tempThreshold = newValue.toInt();
                                 _sliderChangingTEMP = true;
                               });
-                            },poujii ffg45389onuhihjftgyklbvvhgjt78
-
-  
-  \ WE                          onChangeEnd: (newValue) {
+                            },
+                            onChangeEnd: (newValue) {
                               _showConfirmationDialogTemp(newValue);
                               _sliderChangingTEMP = false;
                             },

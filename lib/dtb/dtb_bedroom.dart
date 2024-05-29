@@ -27,7 +27,7 @@ class _MyAppState extends State<Database> {
     String dayShow = formattedToShow(adjustedDateTime);
     (typeShow == "Gas")
         ? (stringToShow = "History of Gas in $dayShow")
-        : (stringToShow = "History of Temp in $dayShow");
+        : (stringToShow = "History of Temperature in $dayShow");
     //stringToShow = "History in $temp";
   }
 
