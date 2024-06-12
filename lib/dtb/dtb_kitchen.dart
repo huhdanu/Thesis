@@ -46,11 +46,13 @@ class _MyAppState extends State<Database> {
 
   /* ====================================== func to click select one day ==================================== */
   void _showDatePicker() async {
+    DateTime today = DateTime.now();
+    DateTime yesterday = today.subtract(const Duration(days: 1));
     DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: yesterday,
       firstDate: DateTime(2024, 4, 1),
-      lastDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: yesterday,
     );
     if (pickedDate != null) {
       setState(() {
